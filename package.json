@@ -1,0 +1,22 @@
+{
+  "name": "classroom-blockly-racer",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=@racer/server",
+    "dev:client": "npm run dev --workspace=@racer/client",
+    "build": "npm run build --workspace=@racer/shared && npm run build --workspace=@racer/server && npm run build --workspace=@racer/client",
+    "build:shared": "npm run build --workspace=@racer/shared",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
