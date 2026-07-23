@@ -28,9 +28,15 @@ let commandSeq = 0;
  * is what guarantees a stale or mistimed event can never be mistaken
  * for the answer to the command currently in flight - in particular,
  * it means the 1.5s wall-collision shake in RaceScene genuinely
- * blocks the next block from running, because nothing here advances
- * until the result carrying *this* command's id arrives, however
- * long that takes.
+ * blocks the *next* block from starting, because nothing here
+ * advances until the result carrying *this* command's id arrives,
+ * however long that takes.
+ *
+ * A 'blocked' result is a timed penalty, not a stop condition: once
+ * the shake resolves and the result arrives, execution continues to
+ * the next block in the program. Only 'finished' (reached the goal)
+ * or an explicit cancel (Reset Sprite / Clear Work Area) actually
+ * end a run early.
  */
 export function useProgramRunner(bridge: Phaser.Events.EventEmitter): UseProgramRunnerResult {
   const [running, setRunning] = useState(false);
@@ -82,15 +88,18 @@ export function useProgramRunner(bridge: Phaser.Events.EventEmitter): UseProgram
           if (runTokenRef.current !== token) return; // cancelled while waiting on this step
 
           if (step.action === 'blocked') {
+            // The 1.5s shake (already waited out above, since this
+            // result only arrives after RaceScene's delayedCall fires)
+            // IS the penalty - it doesn't also stop the program. Show
+            // what happened and keep going with the next block.
             setMessage({
               kind: 'blocked',
               text:
                 step.reason === 'wall'
-                  ? "Oops - there's a wall there! Check the highlighted block."
-                  : 'That would go off the edge of the maze! Check the highlighted block.',
+                  ? "Hit a wall! Lost 1.5 seconds - continuing with the next block."
+                  : "Tried to go off the edge! Lost 1.5 seconds - continuing with the next block.",
             });
-            setRunning(false);
-            return;
+            continue;
           }
 
           if (step.action === 'finished') {
@@ -99,6 +108,10 @@ export function useProgramRunner(bridge: Phaser.Events.EventEmitter): UseProgram
             setRunning(false);
             return;
           }
+
+          // A normal successful step (moved/turned) - clear any stale
+          // blocked message from an earlier collision in this same run.
+          setMessage(null);
         }
 
         onHighlight(null);

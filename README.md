@@ -14,14 +14,17 @@ Run to execute them - the same animation and collision pipeline from
 Milestone 3, now driven by real code instead of debug buttons.
 Hitting a wall costs a real 1.5-second shake penalty, during which
 execution is genuinely paused (not just visually so - see the
-commandId correlation in `useProgramRunner`/`RaceScene`), and
-highlights the offending block. Two independent controls: **Reset
-Sprite** (robot back to start, code untouched) and **Clear Work
-Area** (blocks wiped, robot untouched) - nothing else resets
-automatically. Loops and conditionals are deliberately not available
-yet (progressive unlocking is Milestone 7). The maze canvas and
-Blockly workspace sit side by side (wrapping to stacked on narrow
-screens) so a student can watch the robot and edit blocks at once.
+commandId correlation in `useProgramRunner`/`RaceScene`) and the
+offending block stays highlighted. The penalty doesn't stop the
+program, though - once the shake finishes, execution continues with
+the next block, same as a real robot that bumped into something and
+kept going. Two independent controls: **Reset Sprite** (robot back to
+start, code untouched) and **Clear Work Area** (blocks wiped, robot
+untouched) - nothing else resets automatically. Loops and
+conditionals are deliberately not available yet (progressive
+unlocking is Milestone 7). The maze canvas and Blockly workspace sit
+side by side (wrapping to stacked on narrow screens) so a student can
+watch the robot and edit blocks at once.
 
 Students still pick a placeholder-colored robot when joining (see
 the color picker added after Milestone 3) - the chosen color is what
@@ -80,22 +83,29 @@ sessionStorage).
    Click **Run**. The robot should execute them in order with the
    same smooth animation as before, and the Run button should read
    "Running…" and be disabled until execution finishes.
-5. **Wall collision - execution must actually pause.** Build a
+5. **Wall collision is a timed penalty, not a stop.** Build a
    program with at least two blocks *after* one that walks into a
    wall (e.g. move, move, move-into-wall, turn right, move). Click
-   Run and watch closely: when the robot hits the wall, it should
-   shake in place for the full ~1.5 seconds, and **no further blocks
-   should highlight or execute during that time** - the block that
-   caused the collision stays highlighted, and only after the shake
-   finishes does the amber "Oops - there's a wall there!" message
-   appear and execution stop. If you see the highlight jump to a
-   later block, or the robot attempt another move, before the shake
-   visibly finishes, that's the bug to report back.
-6. **Nothing auto-resets after a blocked run.** After step 5, don't
-   click either reset button - click Run again instead. The robot
-   should attempt to execute the same blocks starting from wherever
-   it currently sits (the pre-collision position), not from the
-   maze's start.
+   Run and watch closely:
+   - When the robot hits the wall, it should shake in place for the
+     full ~1.5 seconds, and **no further blocks should highlight or
+     execute during that time** - the block that caused the collision
+     stays highlighted while shaking.
+   - Once the shake finishes, an amber "Hit a wall! Lost 1.5 seconds -
+     continuing with the next block" message should appear, and
+     **execution should then continue** - the highlight should move
+     to the next block and it should actually run, not stop and wait
+     for you to click Run again.
+   - If a later block in the same run succeeds, the amber message
+     should clear (or get replaced by the green "reached the goal"
+     message if that later block reaches it).
+   If you see execution stop after the shake instead of continuing,
+   that's the bug to report back.
+6. **The robot's position after a collision reflects reality.**
+   Since the blocked move didn't happen, the robot should still be
+   sitting where it was *before* attempting the wall - the collision
+   costs time, not position. Confirm subsequent blocks (e.g. a turn)
+   execute correctly from that actual position.
 7. **Reset Sprite**: click it. The robot should snap back to the
    maze's start position/facing. Your blocks should be untouched.
 8. **Clear Work Area**: with some blocks still in the workspace,
