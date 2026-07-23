@@ -11,6 +11,8 @@ export interface Player {
   nickname: string;
   color: SpriteColorId;
   connected: boolean;
+  /** True once this player has completed the current race - see practiceMaze in mazes/. Reset to false whenever a new race starts. */
+  finished: boolean;
   joinedAt: number;
 }
 

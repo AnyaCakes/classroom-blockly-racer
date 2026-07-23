@@ -1,4 +1,4 @@
-import type { JoinFailureReason, JoinResult, Player, Room, SpriteColorId } from '@racer/shared';
+import type { JoinFailureReason, JoinResult, LeaderboardEntry, Player, Room, SpriteColorId } from '@racer/shared';
 import { generateUniqueRoomCode } from './roomCode.js';
 
 const DEFAULT_GRACE_PERIOD_MS = 30_000;
@@ -23,6 +23,10 @@ type TimerKey = string; // `${roomCode}:${clientId}`
 export class RoomManager {
   private rooms = new Map<string, Room>();
   private disconnectTimers = new Map<TimerKey, NodeJS.Timeout>();
+  /** When the current race started, per room - the basis for server-authoritative finish timing. */
+  private raceStartedAt = new Map<string, number>();
+  /** Finish order for the current race, per room - pushed to in finish order, so the array index IS the rank. */
+  private finishOrder = new Map<string, LeaderboardEntry[]>();
 
   constructor(private readonly gracePeriodMs: number = DEFAULT_GRACE_PERIOD_MS) {}
 
@@ -132,6 +136,7 @@ export class RoomManager {
       nickname: trimmed,
       color,
       connected: true,
+      finished: false,
       joinedAt: Date.now(),
     };
     room.players.push(player);
@@ -180,8 +185,7 @@ export class RoomManager {
   }
 
   // ---------------------------------------------------------------------
-  // Race lifecycle (Milestone 3: just the status/maze transition -
-  // no interpreter or win detection yet, that's Milestone 4/5)
+  // Race lifecycle
   // ---------------------------------------------------------------------
 
   startRace(code: string, mazeId: string): Room | undefined {
@@ -190,6 +194,9 @@ export class RoomManager {
 
     room.status = 'racing';
     room.currentMazeId = mazeId;
+    room.players.forEach((p) => (p.finished = false));
+    this.raceStartedAt.set(code, Date.now());
+    this.finishOrder.set(code, []);
     return room;
   }
 
@@ -199,7 +206,39 @@ export class RoomManager {
 
     room.status = 'lobby';
     room.currentMazeId = null;
+    room.players.forEach((p) => (p.finished = false));
+    this.raceStartedAt.delete(code);
+    this.finishOrder.delete(code);
     return room;
+  }
+
+  /**
+   * Records a player's finish, computing elapsed time from the
+   * server's own recorded race-start timestamp rather than trusting
+   * anything the client reports - a client-supplied duration is
+   * trivially fake, and this is the one place in the app where that
+   * actually matters (it's what the leaderboard is built from).
+   * Returns null (and does nothing) if the room isn't racing, the
+   * player is unknown, or they've already finished this race - a
+   * stray/duplicate race:finish is a safe no-op, not an error.
+   */
+  recordFinish(code: string, playerId: string): { room: Room; leaderboard: LeaderboardEntry[] } | null {
+    const room = this.rooms.get(code);
+    if (!room || room.status !== 'racing') return null;
+
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player || player.finished) return null;
+
+    const startedAt = this.raceStartedAt.get(code);
+    const timeMs = startedAt ? Date.now() - startedAt : 0;
+
+    player.finished = true;
+
+    const leaderboard = this.finishOrder.get(code) ?? [];
+    leaderboard.push({ playerId, nickname: player.nickname, timeMs, rank: leaderboard.length + 1 });
+    this.finishOrder.set(code, leaderboard);
+
+    return { room, leaderboard };
   }
 
   // ---------------------------------------------------------------------

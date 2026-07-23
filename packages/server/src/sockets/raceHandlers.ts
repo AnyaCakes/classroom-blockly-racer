@@ -45,7 +45,27 @@ export function registerRaceHandlers(io: AppServer, socket: AppSocket, roomManag
     io.to(roomCode).emit('room:state', updated);
   });
 
-  // race:progress and race:finish are Milestone 5 (real interpreter-driven
-  // execution) - deliberately unhandled here so a stray client emit is a
-  // silent no-op rather than something to half-implement now.
+  socket.on('race:progress', (roomCode, step) => {
+    const room = roomManager.getRoom(roomCode);
+    if (!room || room.status !== 'racing') return;
+
+    // Relayed to everyone else in the room, not consumed by any
+    // client yet - Milestone 6's teacher dashboard is the first
+    // actual consumer of this event. Deliberately excludes the
+    // sender (socket.to, not io.to) since a client already has its
+    // own movement locally; it only needs to hear about others.
+    socket.to(roomCode).emit('race:opponentProgress', socket.id, step);
+  });
+
+  socket.on('race:finish', (roomCode, _clientReportedTimeMs) => {
+    // The client-reported time is intentionally ignored - see the
+    // doc comment on RoomManager.recordFinish for why. It's still
+    // part of the event signature so a future debug/dev view could
+    // compare client vs server timing if that's ever useful.
+    const result = roomManager.recordFinish(roomCode, socket.id);
+    if (!result) return; // not racing, unknown player, or already finished - safe no-op
+
+    io.to(roomCode).emit('race:leaderboard', result.leaderboard);
+    io.to(roomCode).emit('room:state', result.room);
+  });
 }
