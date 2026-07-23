@@ -31,14 +31,18 @@ export type BlockCategory =
 
 /**
  * The program AST produced by walking a Blockly workspace.
- * This is intentionally small for Milestone 1 — only what's needed
- * to prove the shared-package/interpreter shape end to end.
- * Loop/conditional/variable node types are added in later milestones.
+ * `blockId` traces each node back to the exact Blockly block that
+ * produced it, so the UI can highlight "this is the block that
+ * caused the problem" during execution - not just report a step
+ * index. Loop/conditional/variable node types are added in the
+ * progressive-unlocking milestone; this generator-based interpreter
+ * shape (see interpreter/index.ts) is designed so adding them means
+ * extending the walk, not changing how callers consume it.
  */
 export type ProgramNode =
-  | { type: 'moveForward' }
-  | { type: 'turnLeft' }
-  | { type: 'turnRight' };
+  | { type: 'moveForward'; blockId: string }
+  | { type: 'turnLeft'; blockId: string }
+  | { type: 'turnRight'; blockId: string };
 
 export type Program = ProgramNode[];
 

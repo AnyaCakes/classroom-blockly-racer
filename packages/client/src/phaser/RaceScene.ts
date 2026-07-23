@@ -55,11 +55,13 @@ export class RaceScene extends Phaser.Scene {
     this.bridge.on('command:moveForward', this.handleMoveForward, this);
     this.bridge.on('command:turnLeft', this.handleTurnLeft, this);
     this.bridge.on('command:turnRight', this.handleTurnRight, this);
+    this.bridge.on('command:resetToStart', this.handleResetToStart, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.bridge.off('command:moveForward', this.handleMoveForward, this);
       this.bridge.off('command:turnLeft', this.handleTurnLeft, this);
       this.bridge.off('command:turnRight', this.handleTurnRight, this);
+      this.bridge.off('command:resetToStart', this.handleResetToStart, this);
     });
 
     this.bridge.emit('ready');
@@ -93,6 +95,9 @@ export class RaceScene extends Phaser.Scene {
     return this.getCell(pos) === 'wall' ? 'wall' : null;
   }
 
+  /** How long the robot shakes in place after hitting a wall/boundary - a deliberate time cost for a mistake, not just a visual flourish. */
+  private static readonly BLOCKED_SHAKE_DURATION_MS = 1500;
+
   private handleMoveForward = (): void => {
     if (this.animating) return;
 
@@ -101,7 +106,7 @@ export class RaceScene extends Phaser.Scene {
     const blockReason = this.isBlocked(next);
 
     if (blockReason) {
-      this.emitResult({ action: 'blocked', reason: blockReason, position: this.position });
+      this.shakeOnBlocked(blockReason);
       return;
     }
 
@@ -123,6 +128,36 @@ export class RaceScene extends Phaser.Scene {
       },
     });
   };
+
+  /**
+   * Shakes the robot in place for BLOCKED_SHAKE_DURATION_MS, then
+   * reports 'blocked'. Uses a real timer (delayedCall) rather than
+   * tween-cycle-count math to control the total duration - the shake
+   * tween itself just repeats indefinitely for the visual and gets
+   * stopped when the timer fires, so the 1.5s penalty is exact
+   * regardless of how the wobble looks.
+   */
+  private shakeOnBlocked(reason: 'wall' | 'boundary'): void {
+    this.animating = true;
+    const originX = this.robot.x;
+    const originY = this.robot.y;
+
+    const shakeTween = this.tweens.add({
+      targets: this.robot,
+      x: originX + 6,
+      duration: 60,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    this.time.delayedCall(RaceScene.BLOCKED_SHAKE_DURATION_MS, () => {
+      shakeTween.stop();
+      this.robot.setPosition(originX, originY);
+      this.animating = false;
+      this.emitResult({ action: 'blocked', reason, position: this.position });
+    });
+  }
 
   private handleTurnLeft = (): void => {
     if (this.animating) return;
@@ -152,6 +187,23 @@ export class RaceScene extends Phaser.Scene {
       },
     });
   }
+
+  /**
+   * Not gated by `this.animating` - unlike every other command, this
+   * one is meant to work even while the robot is mid-shake or
+   * mid-move, since it's the student's explicit "start over" action
+   * and shouldn't be blocked by the very animation it's cancelling.
+   */
+  private handleResetToStart = (): void => {
+    this.tweens.killTweensOf(this.robot);
+    this.animating = false;
+    this.position = { ...this.maze.start };
+    this.facing = this.maze.startFacing;
+    const pixel = gridToPixel(this.position);
+    this.robot.setPosition(pixel.x, pixel.y);
+    this.robot.setRotation(facingToRotation(this.facing));
+    this.emitResult({ action: 'moved', position: this.position, facing: this.facing });
+  };
 
   private emitResult(step: RaceStep): void {
     this.bridge.emit('result:step', step);
