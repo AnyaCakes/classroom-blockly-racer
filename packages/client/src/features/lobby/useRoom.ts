@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { JoinFailureReason, RoomSnapshot } from '@racer/shared';
+import type { JoinFailureReason, Player, RoomSnapshot, SpriteColorId } from '@racer/shared';
 import type { AppSocket } from '../../hooks/useSocket.js';
 import { getOrCreateClientId } from './useClientId.js';
 
@@ -10,8 +10,10 @@ interface UseRoomResult {
   role: LobbyRole;
   error: string | null;
   isTeacherOfRoom: boolean;
+  /** This tab's own Player record, once joined as a student - undefined for the teacher. */
+  myPlayer: Player | undefined;
   createRoom: () => void;
-  joinRoom: (roomCode: string, nickname: string) => void;
+  joinRoom: (roomCode: string, nickname: string, color: SpriteColorId) => void;
   leaveRoom: () => void;
   removePlayer: (playerId: string) => void;
   startRace: (mazeId: string) => void;
@@ -75,16 +77,23 @@ export function useRoom(socket: AppSocket, connected: boolean): UseRoomResult {
   }, [socket, clientId]);
 
   const joinRoom = useCallback(
-    (roomCode: string, nickname: string) => {
-      socket.emit('room:join', roomCode.trim().toUpperCase(), nickname, clientId, (result) => {
-        if (result.ok) {
-          setRole('student');
-          setRoom(result.room);
-          setError(null);
-        } else {
-          setError(describeJoinFailure(result.reason));
+    (roomCode: string, nickname: string, color: SpriteColorId) => {
+      socket.emit(
+        'room:join',
+        roomCode.trim().toUpperCase(),
+        nickname,
+        color,
+        clientId,
+        (result) => {
+          if (result.ok) {
+            setRole('student');
+            setRoom(result.room);
+            setError(null);
+          } else {
+            setError(describeJoinFailure(result.reason));
+          }
         }
-      });
+      );
     },
     [socket, clientId]
   );
@@ -119,11 +128,14 @@ export function useRoom(socket: AppSocket, connected: boolean): UseRoomResult {
 
   const clearError = useCallback(() => setError(null), []);
 
+  const myPlayer = room?.players.find((p) => p.clientId === clientId);
+
   return {
     room,
     role,
     error,
     isTeacherOfRoom: role === 'teacher',
+    myPlayer,
     createRoom,
     joinRoom,
     leaveRoom,

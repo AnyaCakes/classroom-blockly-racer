@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { useEffect, useRef } from 'react';
-import type { MazeDefinition } from '@racer/shared';
+import type { MazeDefinition, SpriteColorId } from '@racer/shared';
 import { RaceScene, RACE_SCENE_KEY } from '../../phaser/RaceScene.js';
 import { mazePixelDimensions } from '../../phaser/gridToPixel.js';
 
@@ -8,6 +8,8 @@ interface Props {
   maze: MazeDefinition;
   /** Shared with DebugControls so button clicks can emit `command:*` events the scene listens for. */
   bridge: Phaser.Events.EventEmitter;
+  /** This client's chosen robot color; undefined for the teacher (who has no robot of their own). */
+  robotColor?: SpriteColorId;
 }
 
 /**
@@ -17,7 +19,7 @@ interface Props {
  * because Phaser's scene graph and React's virtual DOM don't mix
  * well if you try to make Phaser objects React-controlled.
  */
-export function RaceCanvas({ maze, bridge }: Props) {
+export function RaceCanvas({ maze, bridge, robotColor }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -44,6 +46,7 @@ export function RaceCanvas({ maze, bridge }: Props) {
     // not a race condition, just an ordering requirement.
     game.registry.set('maze', maze);
     game.registry.set('bridge', bridge);
+    if (robotColor) game.registry.set('robotColor', robotColor);
 
     gameRef.current = game;
 

@@ -6,8 +6,11 @@ const COLORS = {
   wall: 0x3a3a4a,
   goal: 0x4caf50,
   gridLine: 0xd8d4c8,
-  robotBody: 0x2f6fed,
-  robotFacing: 0xffffff,
+  // White so Phaser's setTint() reproduces a player's chosen sprite
+  // color cleanly (tint multiplies against the base texture color -
+  // tinting an already-colored texture would blend muddily instead).
+  robotBody: 0xffffff,
+  robotFacing: 0x222222,
 } as const;
 
 /**

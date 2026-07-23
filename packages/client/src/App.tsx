@@ -16,6 +16,7 @@ export function App() {
     room,
     role,
     error,
+    myPlayer,
     createRoom,
     joinRoom,
     leaveRoom,
@@ -38,7 +39,7 @@ export function App() {
       {!connected && <p style={{ color: 'crimson' }}>Connecting to server...</p>}
 
       {room?.status === 'racing' && maze ? (
-        <RaceScreen maze={maze} role={role} onResetRace={resetRace} />
+        <RaceScreen maze={maze} role={role} robotColor={myPlayer?.color} onResetRace={resetRace} />
       ) : room ? (
         <LobbyScreen
           room={room}

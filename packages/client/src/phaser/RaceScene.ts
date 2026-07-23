@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import type { CellType, Direction, GridPosition, MazeDefinition, RaceStep } from '@racer/shared';
+import type { CellType, Direction, GridPosition, MazeDefinition, RaceStep, SpriteColorId } from '@racer/shared';
+import { DEFAULT_SPRITE_COLOR, getSpriteColorHex } from '@racer/shared';
 import { createPlaceholderTextures } from './createPlaceholderTextures.js';
 import { facingToRotation, gridToPixel } from './gridToPixel.js';
 
@@ -38,6 +39,7 @@ export class RaceScene extends Phaser.Scene {
   create(): void {
     this.maze = this.registry.get('maze');
     this.bridge = this.registry.get('bridge');
+    const robotColor: SpriteColorId = this.registry.get('robotColor') ?? DEFAULT_SPRITE_COLOR;
 
     createPlaceholderTextures(this);
     this.drawGrid();
@@ -48,6 +50,7 @@ export class RaceScene extends Phaser.Scene {
     const startPixel = gridToPixel(this.position);
     this.robot = this.add.image(startPixel.x, startPixel.y, 'robot');
     this.robot.setRotation(facingToRotation(this.facing));
+    this.robot.setTint(getSpriteColorHex(robotColor));
 
     this.bridge.on('command:moveForward', this.handleMoveForward, this);
     this.bridge.on('command:turnLeft', this.handleTurnLeft, this);

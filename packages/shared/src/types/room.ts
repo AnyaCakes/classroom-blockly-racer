@@ -1,3 +1,5 @@
+import type { SpriteColorId } from './sprite.js';
+
 /**
  * A student in a room. `id` is the socket-assigned connection id;
  * `clientId` is a persistent id the client stores itself (sessionStorage)
@@ -7,6 +9,7 @@ export interface Player {
   id: string;
   clientId: string;
   nickname: string;
+  color: SpriteColorId;
   connected: boolean;
   joinedAt: number;
 }

@@ -32,8 +32,8 @@ export function registerRoomHandlers(io: AppServer, socket: AppSocket, roomManag
     io.to(roomCode).emit('room:state', room);
   });
 
-  socket.on('room:join', (roomCode, nickname, clientId, cb) => {
-    const result = roomManager.joinRoom(roomCode, socket.id, clientId, nickname);
+  socket.on('room:join', (roomCode, nickname, color, clientId, cb) => {
+    const result = roomManager.joinRoom(roomCode, socket.id, clientId, nickname, color);
     cb(result);
     if (!result.ok) return;
 

@@ -1,4 +1,4 @@
-import { mazeRegistry, type RoomSnapshot } from '@racer/shared';
+import { getSpriteColorHex, mazeRegistry, type RoomSnapshot } from '@racer/shared';
 import { useState } from 'react';
 import type { LobbyRole } from './useRoom.js';
 
@@ -26,13 +26,21 @@ export function LobbyScreen({ room, role, onLeave, onRemovePlayer, onStartRace }
       <h3>Players ({room.players.length})</h3>
       <ul>
         {room.players.map((player) => (
-          <li key={player.clientId}>
+          <li key={player.clientId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span
+              aria-hidden
+              style={{
+                display: 'inline-block',
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                background: `#${getSpriteColorHex(player.color).toString(16).padStart(6, '0')}`,
+              }}
+            />
             {player.nickname}
             {!player.connected && ' (disconnected)'}
             {role === 'teacher' && (
-              <button onClick={() => onRemovePlayer(player.id)} style={{ marginLeft: '0.5rem' }}>
-                Remove
-              </button>
+              <button onClick={() => onRemovePlayer(player.id)}>Remove</button>
             )}
           </li>
         ))}

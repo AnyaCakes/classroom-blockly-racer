@@ -13,6 +13,12 @@ maze layout and robot start position from real `MazeDefinition` data
 animation and collision-detection pipeline that Milestone 4's real
 Blockly interpreter will drive. No Blockly or student programs yet.
 
+**Since Milestone 3:** students pick a robot color when joining
+(placeholder colored circles for now, real sprite art comes later
+per the graphics plan). The color is stored on `Player`, shown as a
+swatch in the lobby roster, and applied to the robot in-race via
+Phaser's `setTint()` against a white base texture.
+
 ## Stack
 
 - **Client**: React, TypeScript, Vite, Socket.io-client (Phaser 3 and
@@ -79,6 +85,16 @@ debug controls are shared/global rather than per-student, and there's
 no server-side sync of robot positions between students yet - each
 browser's robot only reflects that browser's own button clicks. Real
 simultaneous multi-student racing is Milestone 5.
+
+**Testing the color picker:** on the join form, pick a color other
+than the default (e.g. purple) before joining. Confirm: (1) the
+lobby roster shows a matching-colored dot next to your name, and
+(2) once a race starts, your robot in the canvas is tinted that
+color rather than the default blue. Two students joining with
+*different* colors in the same room should each see their own
+correct color - this isn't cross-checked between browsers yet since
+each browser only renders its own local robot (see the limitation
+above), but each student's own robot should match their own pick.
 
 ## Typechecking
 

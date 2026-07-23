@@ -1,5 +1,6 @@
 import type { JoinResult, Player, RoomSnapshot } from './room.js';
 import type { MazeDefinition, RaceStep } from './maze.js';
+import type { SpriteColorId } from './sprite.js';
 
 export interface ClientToServerEvents {
   'room:create': (
@@ -9,6 +10,7 @@ export interface ClientToServerEvents {
   'room:join': (
     roomCode: string,
     nickname: string,
+    color: SpriteColorId,
     clientId: string,
     cb: (result: JoinResult) => void
   ) => void;

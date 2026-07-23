@@ -1,4 +1,4 @@
-import type { JoinFailureReason, JoinResult, Player, Room } from '@racer/shared';
+import type { JoinFailureReason, JoinResult, Player, Room, SpriteColorId } from '@racer/shared';
 import { generateUniqueRoomCode } from './roomCode.js';
 
 const DEFAULT_GRACE_PERIOD_MS = 30_000;
@@ -91,7 +91,8 @@ export class RoomManager {
     code: string,
     socketId: string,
     clientId: string,
-    nickname: string
+    nickname: string,
+    color: SpriteColorId
   ): JoinResult {
     const room = this.rooms.get(code);
     if (!room || room.status === 'abandoned') {
@@ -100,7 +101,9 @@ export class RoomManager {
 
     const existing = room.players.find((p) => p.clientId === clientId);
     if (existing) {
-      // Reconnecting player, not a new join.
+      // Reconnecting player, not a new join - keep their original
+      // color/nickname rather than letting a resubmitted form change
+      // identity mid-room.
       this.cancelDisconnectTimer(code, clientId);
       existing.id = socketId;
       existing.connected = true;
@@ -127,6 +130,7 @@ export class RoomManager {
       id: socketId,
       clientId,
       nickname: trimmed,
+      color,
       connected: true,
       joinedAt: Date.now(),
     };
