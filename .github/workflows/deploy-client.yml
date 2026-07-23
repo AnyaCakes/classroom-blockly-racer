@@ -1,0 +1,66 @@
+name: Deploy client to GitHub Pages
+
+# Only the client is deployed here - GitHub Pages serves static files
+# only and cannot run the Socket.io server. The server is deployed
+# separately (Render/Railway/Fly); see README.md "Deployment".
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/client/**'
+      - 'packages/shared/**'
+      - '.github/workflows/deploy-client.yml'
+  workflow_dispatch: {} # allows manually re-running from the Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build shared package
+        run: npm run build:shared
+
+      - name: Build client
+        run: npm run build --workspace=@racer/client
+        env:
+          # Must match the repo name so asset URLs resolve correctly
+          # at username.github.io/repo-name/. Computed automatically -
+          # nothing to edit here even if the repo is renamed.
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # Set this in the repo's Settings -> Secrets and variables ->
+          # Actions -> Variables tab once the server is deployed. Until
+          # then the client falls back to localhost:4000, which won't
+          # work for anyone but you on your own machine.
+          VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

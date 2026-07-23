@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: classroom-blockly-racer-server
+    runtime: node
+    plan: free
+    # Build/start run from the repo root so npm workspaces resolves
+    # @racer/shared correctly - the server package alone can't build
+    # without it.
+    buildCommand: npm install && npm run build:shared && npm run build --workspace=@racer/server
+    startCommand: npm start --workspace=@racer/server
+    envVars:
+      - key: CLIENT_ORIGIN
+        # Set this to the real GitHub Pages URL after the client is
+        # deployed, e.g. https://username.github.io - Render will
+        # otherwise reject the client's requests via CORS. Not set
+        # automatically here since it depends on your GitHub username
+        # and repo name.
+        sync: false
+      - key: PORT
+        value: 4000
