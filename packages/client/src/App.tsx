@@ -1,28 +1,44 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSocket } from './hooks/useSocket.js';
+import { useRoom } from './features/lobby/useRoom.js';
+import { RoleSelectScreen } from './features/lobby/RoleSelectScreen.js';
+import { CreateRoomScreen } from './features/lobby/CreateRoomScreen.js';
+import { JoinRoomScreen } from './features/lobby/JoinRoomScreen.js';
+import { LobbyScreen } from './features/lobby/LobbyScreen.js';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:4000';
-
-type HealthState = 'checking' | 'ok' | 'unreachable';
+type View = 'roleSelect' | 'creatingRoom' | 'joiningRoom' | 'lobby';
 
 export function App() {
-  const { connected } = useSocket();
-  const [health, setHealth] = useState<HealthState>('checking');
+  const { socket, connected } = useSocket();
+  const { room, role, error, createRoom, joinRoom, leaveRoom, removePlayer, clearError } =
+    useRoom(socket, connected);
+  const [view, setView] = useState<View>('roleSelect');
 
-  useEffect(() => {
-    fetch(`${SERVER_URL}/health`)
-      .then((res) => (res.ok ? setHealth('ok') : setHealth('unreachable')))
-      .catch(() => setHealth('unreachable'));
-  }, []);
+  const handleLeave = () => {
+    leaveRoom();
+    setView('roleSelect');
+  };
 
   return (
-    <main style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
+    <main style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 480 }}>
       <h1>Classroom Blockly Racer</h1>
-      <p>Milestone 1 — scaffolding check.</p>
-      <ul>
-        <li>HTTP health check: <strong>{health}</strong></li>
-        <li>Socket.io connection: <strong>{connected ? 'connected' : 'disconnected'}</strong></li>
-      </ul>
+      {!connected && <p style={{ color: 'crimson' }}>Connecting to server...</p>}
+
+      {room ? (
+        <LobbyScreen room={room} role={role} onLeave={handleLeave} onRemovePlayer={removePlayer} />
+      ) : view === 'roleSelect' ? (
+        <RoleSelectScreen
+          onSelectTeacher={() => setView('creatingRoom')}
+          onSelectStudent={() => {
+            clearError();
+            setView('joiningRoom');
+          }}
+        />
+      ) : view === 'creatingRoom' ? (
+        <CreateRoomScreen onCreate={createRoom} />
+      ) : (
+        <JoinRoomScreen onJoin={joinRoom} error={error} />
+      )}
     </main>
   );
 }

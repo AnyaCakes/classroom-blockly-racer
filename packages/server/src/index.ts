@@ -11,6 +11,7 @@ import type {
 
 import { healthRouter } from './http/health.js';
 import { RoomManager } from './rooms/RoomManager.js';
+import { registerRoomHandlers } from './sockets/roomHandlers.js';
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
@@ -34,6 +35,11 @@ export const roomManager = new RoomManager();
 
 io.on('connection', (socket) => {
   console.log(`[socket] connected: ${socket.id}`);
+
+  socket.data.clientId = '';
+  socket.data.roomCode = null;
+
+  registerRoomHandlers(io, socket, roomManager);
 
   socket.on('disconnect', (reason) => {
     console.log(`[socket] disconnected: ${socket.id} (${reason})`);

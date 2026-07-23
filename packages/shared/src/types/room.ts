@@ -11,11 +11,15 @@ export interface Player {
   joinedAt: number;
 }
 
-export type RoomStatus = 'lobby' | 'racing' | 'finished';
+export type RoomStatus = 'lobby' | 'racing' | 'finished' | 'abandoned';
 
 export interface Room {
   code: string;
+  /** Current socket id of the teacher; empty string while disconnected. */
   teacherId: string;
+  /** Persistent id used to match a reconnecting teacher back to this room. */
+  teacherClientId: string;
+  teacherConnected: boolean;
   status: RoomStatus;
   players: Player[];
   currentMazeId: string | null;
@@ -25,6 +29,7 @@ export interface Room {
 export type JoinFailureReason =
   | 'room_not_found'
   | 'room_in_progress'
+  | 'room_abandoned'
   | 'nickname_taken'
   | 'nickname_invalid';
 
@@ -34,7 +39,8 @@ export type JoinResult =
 
 /**
  * The subset of Room state that's safe/useful to send to clients.
- * (Kept identical to Room for now, but defined separately so we can
- * redact server-only fields later without changing call sites.)
+ * Defined separately from Room (even though identical today) so we
+ * can redact server-only fields later without changing call sites
+ * that consume RoomSnapshot.
  */
-export type RoomSnapshot = Omit<Room, 'teacherId'> & { teacherId: string };
+export type RoomSnapshot = Room;
