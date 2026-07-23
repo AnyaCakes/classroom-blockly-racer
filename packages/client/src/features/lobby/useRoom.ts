@@ -14,6 +14,8 @@ interface UseRoomResult {
   joinRoom: (roomCode: string, nickname: string) => void;
   leaveRoom: () => void;
   removePlayer: (playerId: string) => void;
+  startRace: (mazeId: string) => void;
+  resetRace: () => void;
   clearError: () => void;
 }
 
@@ -102,6 +104,19 @@ export function useRoom(socket: AppSocket, connected: boolean): UseRoomResult {
     [socket, room]
   );
 
+  const startRace = useCallback(
+    (mazeId: string) => {
+      if (!room) return;
+      socket.emit('race:start', room.code, mazeId);
+    },
+    [socket, room]
+  );
+
+  const resetRace = useCallback(() => {
+    if (!room) return;
+    socket.emit('race:reset', room.code);
+  }, [socket, room]);
+
   const clearError = useCallback(() => setError(null), []);
 
   return {
@@ -113,6 +128,8 @@ export function useRoom(socket: AppSocket, connected: boolean): UseRoomResult {
     joinRoom,
     leaveRoom,
     removePlayer,
+    startRace,
+    resetRace,
     clearError,
   };
 }

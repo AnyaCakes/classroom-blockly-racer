@@ -1,4 +1,5 @@
-import type { RoomSnapshot } from '@racer/shared';
+import { mazeRegistry, type RoomSnapshot } from '@racer/shared';
+import { useState } from 'react';
 import type { LobbyRole } from './useRoom.js';
 
 interface Props {
@@ -6,9 +7,13 @@ interface Props {
   role: LobbyRole;
   onLeave: () => void;
   onRemovePlayer: (playerId: string) => void;
+  onStartRace: (mazeId: string) => void;
 }
 
-export function LobbyScreen({ room, role, onLeave, onRemovePlayer }: Props) {
+export function LobbyScreen({ room, role, onLeave, onRemovePlayer, onStartRace }: Props) {
+  const mazeOptions = Object.values(mazeRegistry);
+  const [selectedMazeId, setSelectedMazeId] = useState(mazeOptions[0]?.id ?? '');
+
   return (
     <section>
       <h2>Room {room.code}</h2>
@@ -34,7 +39,31 @@ export function LobbyScreen({ room, role, onLeave, onRemovePlayer }: Props) {
         {room.players.length === 0 && <li>No students have joined yet.</li>}
       </ul>
 
-      <button onClick={onLeave}>{role === 'teacher' ? 'End room' : 'Leave room'}</button>
+      {role === 'teacher' && (
+        <div style={{ marginTop: '1rem' }}>
+          <label>
+            Maze
+            <select value={selectedMazeId} onChange={(e) => setSelectedMazeId(e.target.value)}>
+              {mazeOptions.map((maze) => (
+                <option key={maze.id} value={maze.id}>
+                  {maze.name} ({maze.difficulty})
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            onClick={() => onStartRace(selectedMazeId)}
+            disabled={!selectedMazeId}
+            style={{ marginLeft: '0.5rem' }}
+          >
+            Start Race
+          </button>
+        </div>
+      )}
+
+      <button onClick={onLeave} style={{ marginTop: '1rem' }}>
+        {role === 'teacher' ? 'End room' : 'Leave room'}
+      </button>
     </section>
   );
 }

@@ -6,12 +6,12 @@ by programming a robot with Blockly; first to the goal wins.
 
 ## Status
 
-**Milestone 2 of 8** — room lifecycle: teacher creates a room and
-gets a code, students join with the code and a nickname, and the
-roster updates live for everyone in the room. Reconnection (by a
-persistent per-tab `clientId`) is handled for both students and the
-teacher, with a 30-second grace period before someone is dropped for
-good. No maze or Blockly yet.
+**Milestone 3 of 8** — maze rendering with Phaser. A teacher can
+start a race with a chosen maze; every client renders the same
+maze layout and robot start position from real `MazeDefinition` data
+(nothing hardcoded). Temporary debug buttons (move/turn) prove the
+animation and collision-detection pipeline that Milestone 4's real
+Blockly interpreter will drive. No Blockly or student programs yet.
 
 ## Stack
 
@@ -48,35 +48,37 @@ npm run dev:server        # http://localhost:4000
 npm run dev:client        # http://localhost:5173
 ```
 
-## Testing Milestone 2
+## Testing Milestone 3
 
-Open two browser contexts that don't share `sessionStorage` — e.g. a
-normal window and an incognito/private window — both pointed at
-http://localhost:5173.
+Two tabs, same setup as Milestone 2 (teacher + student, non-shared
+sessionStorage).
 
-1. **Tab 1 (teacher)**: choose "I'm the teacher." A 4-character room
-   code appears (e.g. `RK4X`).
-2. **Tab 2 (student)**: choose "I'm a student," enter that code and a
-   nickname, and join. Tab 2 should land on the lobby screen showing
-   itself in the roster.
-3. **Tab 1** should update to show the new student *without a
-   refresh* — confirms `room:state` is broadcasting correctly.
-4. **Duplicate nickname**: open a third tab, join the same room with
-   the exact nickname from step 2. It should be rejected with a clear
-   message instead of joining.
-5. **Bad room code**: try joining with a made-up code (e.g. `ZZZZ`).
-   Should fail with "we couldn't find a room."
-6. **Reconnection**: in Tab 2's devtools, go offline (Network tab →
-   Offline), wait a few seconds, then go back online. Tab 1 should
-   briefly show the student as disconnected, then the student should
-   reappear as connected — same entry in the roster, not a duplicate.
-7. **Grace-period expiry**: go offline in Tab 2 and stay offline for
-   the full 30 seconds. Tab 1 should show the student removed from
-   the roster entirely.
-8. **Teacher removal**: with a second student joined and connected,
-   click "Remove" next to their name in Tab 1. That student's tab
-   should immediately drop back to the role-select screen, and Tab 1's
-   roster should update to no longer show them.
+1. **Tab 1 (teacher)**: create a room. **Tab 2 (student)**: join it.
+2. **Tab 1**: pick a maze from the dropdown (try both "Straight Line"
+   and "Around the Corner" across two runs to confirm layouts
+   genuinely differ) and click "Start Race."
+3. Both tabs should switch from the lobby to a canvas showing the
+   maze grid and a robot at the marked start position/facing.
+4. Using the debug buttons in either tab, click "Move Forward" a few
+   times, then "Turn Left"/"Turn Right." The robot should animate
+   smoothly, and "Last result" should update with each action's
+   outcome (`moved to (x, y)`, `turned to face N`, etc.) - this
+   proves the interpreter-facing event contract Milestone 4 will
+   build on.
+5. Drive the robot into a wall (or the maze boundary). Movement
+   should stop and "Last result" should show `blocked by wall` (or
+   `blocked by boundary`) instead of silently doing nothing or
+   crashing.
+6. Drive the robot to the goal tile. "Last result" should show
+   `reached the goal!`.
+7. **Tab 1**: click "End race, back to lobby." Both tabs should
+   return to the lobby screen with the roster intact.
+
+**Known limitation (intentional, deferred to Milestone 4/5):** the
+debug controls are shared/global rather than per-student, and there's
+no server-side sync of robot positions between students yet - each
+browser's robot only reflects that browser's own button clicks. Real
+simultaneous multi-student racing is Milestone 5.
 
 ## Typechecking
 
@@ -92,7 +94,7 @@ other as the project grows.
 
 1. ✅ Monorepo scaffold + shared types
 2. ✅ Room lifecycle (create/join, in-memory `RoomManager`)
-3. Maze rendering with Phaser (static, no programming yet)
+3. ✅ Maze rendering with Phaser (static, no programming yet)
 4. Blockly editor + custom step-by-step interpreter (sequencing only)
 5. Race mechanics (simultaneous execution, win detection, leaderboard)
 6. Teacher dashboard live view

@@ -176,6 +176,29 @@ export class RoomManager {
   }
 
   // ---------------------------------------------------------------------
+  // Race lifecycle (Milestone 3: just the status/maze transition -
+  // no interpreter or win detection yet, that's Milestone 4/5)
+  // ---------------------------------------------------------------------
+
+  startRace(code: string, mazeId: string): Room | undefined {
+    const room = this.rooms.get(code);
+    if (!room) return undefined;
+
+    room.status = 'racing';
+    room.currentMazeId = mazeId;
+    return room;
+  }
+
+  resetRace(code: string): Room | undefined {
+    const room = this.rooms.get(code);
+    if (!room) return undefined;
+
+    room.status = 'lobby';
+    room.currentMazeId = null;
+    return room;
+  }
+
+  // ---------------------------------------------------------------------
   // Internals
   // ---------------------------------------------------------------------
 
