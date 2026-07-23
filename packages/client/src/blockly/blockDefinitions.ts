@@ -18,8 +18,10 @@ export function registerCustomBlocks(): void {
       this.appendDummyInput().appendField('when race starts');
       this.appendStatementInput('DO');
       this.setColour(BLOCK_COLORS.hat);
-      this.setDeletable(false);
-      this.setMovable(false);
+      // Deliberately NOT setDeletable(false)/setMovable(false) - this
+      // is a normal block a student can drag in, move, and delete
+      // like any other, available from the toolbox alongside the
+      // movement blocks.
     },
   };
 
@@ -51,18 +53,20 @@ export function registerCustomBlocks(): void {
   };
 }
 
-/** Toolbox offering only the movement blocks - the hat block is seeded directly into the workspace, not draggable from the palette. */
+/** Every block a student can drag from the palette - including the start block, so deleting it doesn't strand them. */
 export const TOOLBOX = {
   kind: 'flyoutToolbox',
   contents: [
+    { kind: 'block', type: 'start_program' },
     { kind: 'block', type: 'move_forward' },
     { kind: 'block', type: 'turn_left' },
     { kind: 'block', type: 'turn_right' },
   ],
 };
 
+/** Seeded into a fresh/cleared workspace purely for convenience - it's a normal, deletable block from here on, not special. */
 export const STARTER_WORKSPACE_XML = `
   <xml>
-    <block type="start_program" id="start_block" deletable="false" movable="false" x="20" y="20"></block>
+    <block type="start_program" id="start_block" x="20" y="20"></block>
   </xml>
 `;

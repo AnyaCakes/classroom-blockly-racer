@@ -33,8 +33,10 @@ export function App() {
     setView('roleSelect');
   };
 
+  const isRacing = room?.status === 'racing' && maze !== null;
+
   return (
-    <main style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 720 }}>
+    <main style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: isRacing ? 1100 : 720 }}>
       <h1>Classroom Blockly Racer</h1>
       {!connected && <p style={{ color: 'crimson' }}>Connecting to server...</p>}
 

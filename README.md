@@ -8,16 +8,20 @@ by programming a robot with Blockly; first to the goal wins.
 
 **Milestone 4 of 8** — Blockly editor and the real interpreter.
 Students write actual programs (move forward / turn left / turn
-right blocks under a "when race starts" hat) and click Run to
-execute them - the same animation and collision pipeline from
+right blocks under a "when race starts" hat, which is itself a
+normal movable/deletable block available from the palette) and click
+Run to execute them - the same animation and collision pipeline from
 Milestone 3, now driven by real code instead of debug buttons.
-Hitting a wall costs a real 1.5-second shake penalty and highlights
-the offending block; a Reset button snaps the robot back to the
-maze's start and clears the workspace, but nothing else resets
-automatically - a blocked run leaves the robot exactly where it
-stopped until the student explicitly resets or the teacher starts a
-new race. Loops and conditionals are deliberately not available yet
-(progressive unlocking is Milestone 7).
+Hitting a wall costs a real 1.5-second shake penalty, during which
+execution is genuinely paused (not just visually so - see the
+commandId correlation in `useProgramRunner`/`RaceScene`), and
+highlights the offending block. Two independent controls: **Reset
+Sprite** (robot back to start, code untouched) and **Clear Work
+Area** (blocks wiped, robot untouched) - nothing else resets
+automatically. Loops and conditionals are deliberately not available
+yet (progressive unlocking is Milestone 7). The maze canvas and
+Blockly workspace sit side by side (wrapping to stacked on narrow
+screens) so a student can watch the robot and edit blocks at once.
 
 Students still pick a placeholder-colored robot when joining (see
 the color picker added after Milestone 3) - the chosen color is what
@@ -66,37 +70,48 @@ sessionStorage).
    **Tab 2 (student)**: join, pick a color, and follow along.
 2. Tab 2 should show the maze canvas *and*, below it, a Blockly
    workspace with a "when race starts" hat block already placed and
-   a palette offering "move forward," "turn left," "turn right."
-3. Drag a few movement blocks so they snap under the hat block.
+   a palette offering that same start block plus "move forward,"
+   "turn left," "turn right."
+3. **The start block is a normal block now**: drag it out of the
+   workspace to delete it (or right-click → Delete). Then drag a
+   fresh one back in from the palette. Both should work exactly like
+   any other block - nothing should refuse to move or delete it.
+4. Drag a few movement blocks so they snap under the hat block.
    Click **Run**. The robot should execute them in order with the
-   same smooth animation as Milestone 3, and the Run button should
-   read "Running…" and be disabled until execution finishes.
-4. **Wall collision**: build a program that walks into a wall.
-   Confirm: (a) the robot visibly shakes in place for about 1.5
-   seconds — not an instant stop, (b) the block that caused it is
-   highlighted in the workspace, (c) a friendly amber message appears
-   ("Oops - there's a wall there!..."), not a browser alert or crash.
-5. **Nothing auto-resets after a blocked run.** After step 4, do
-   *not* click Reset - click Run again instead. The robot should
-   attempt to execute the same blocks starting from wherever it
-   currently sits (the pre-collision position), not from the maze's
-   start. This is intentional: only the Reset button repositions the
-   robot.
-6. **Reset button**: click it. The robot should snap back to the
-   maze's start position/facing, and the Blockly workspace should
-   clear back to just the empty "when race starts" hat block - your
-   program is gone. This is exactly what was asked for (Reset = full
-   restart, not just a position nudge), not a bug to report.
-7. **Successful run**: rebuild a program that solves the maze
+   same smooth animation as before, and the Run button should read
+   "Running…" and be disabled until execution finishes.
+5. **Wall collision - execution must actually pause.** Build a
+   program with at least two blocks *after* one that walks into a
+   wall (e.g. move, move, move-into-wall, turn right, move). Click
+   Run and watch closely: when the robot hits the wall, it should
+   shake in place for the full ~1.5 seconds, and **no further blocks
+   should highlight or execute during that time** - the block that
+   caused the collision stays highlighted, and only after the shake
+   finishes does the amber "Oops - there's a wall there!" message
+   appear and execution stop. If you see the highlight jump to a
+   later block, or the robot attempt another move, before the shake
+   visibly finishes, that's the bug to report back.
+6. **Nothing auto-resets after a blocked run.** After step 5, don't
+   click either reset button - click Run again instead. The robot
+   should attempt to execute the same blocks starting from wherever
+   it currently sits (the pre-collision position), not from the
+   maze's start.
+7. **Reset Sprite**: click it. The robot should snap back to the
+   maze's start position/facing. Your blocks should be untouched.
+8. **Clear Work Area**: with some blocks still in the workspace,
+   click it. All blocks should disappear except a fresh "when race
+   starts" hat block. The robot's position should be unaffected -
+   wherever it was before this click, it stays.
+9. **Successful run**: rebuild a program that solves the maze
    ("Around the Corner" needs move(s), a turn, then more moves).
    Click Run and confirm you reach the goal, see the green "You
    reached the goal!" message, and the Run button re-enables.
-8. **Mid-shake Reset**: trigger a wall collision, and *while the
-   robot is still visibly shaking*, click Reset. The shake should
-   stop immediately, the robot should jump to the start position, and
-   the pending "blocked" message should not appear afterward - this
-   confirms Reset genuinely cancels an in-flight run rather than
-   racing against it.
+10. **Mid-shake cancellation**: trigger a wall collision, and *while
+    the robot is still visibly shaking*, click either Reset Sprite or
+    Clear Work Area. The shake should stop immediately, and no
+    "blocked" message should appear afterward - this confirms both
+    buttons genuinely cancel an in-flight run rather than racing
+    against it.
 
 **Known limitation (intentional, deferred to Milestone 5):** each
 browser only renders and executes its own local robot - there's still
@@ -104,8 +119,7 @@ no server-side sync of one student's progress to another's screen.
 Real simultaneous multi-student racing is Milestone 5.
 
 **Color picker**: still works as before - your robot in the canvas
-should be tinted whatever color you picked when joining, now visible
-while your program runs rather than while clicking debug buttons.
+should be tinted whatever color you picked when joining.
 
 ## Typechecking
 

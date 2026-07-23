@@ -20,9 +20,15 @@ const TURN_RIGHT: Record<Direction, Direction> = { N: 'E', E: 'S', S: 'W', W: 'N
  * Commands come in and results go out entirely through `bridge`
  * (a plain Phaser.Events.EventEmitter set on the registry by
  * RaceCanvas before the scene starts). This scene never talks to
- * React directly, and never will - Milestone 4's interpreter will
- * emit the exact same `command:*` events this scene already
- * understands, just driven by a Blockly program instead of buttons.
+ * React directly, and never will.
+ *
+ * Every `command:*` event carries a caller-supplied `commandId`,
+ * echoed back on the matching `result:step` emission. This isn't
+ * decorative - it's what lets the caller (useProgramRunner) tell a
+ * genuine "this is the result for the command I just sent" apart
+ * from any other result:step emission, with zero ambiguity about
+ * timing. Reset (`command:resetToStart`) doesn't require a caller to
+ * wait on it, so it's fire-and-forget and its result carries no id.
  */
 export class RaceScene extends Phaser.Scene {
   private maze!: MazeDefinition;
@@ -31,6 +37,9 @@ export class RaceScene extends Phaser.Scene {
   private position!: GridPosition;
   private facing!: Direction;
   private animating = false;
+
+  /** How long the robot shakes in place after hitting a wall/boundary - a deliberate time cost for a mistake, not just a visual flourish. */
+  private static readonly BLOCKED_SHAKE_DURATION_MS = 1500;
 
   constructor() {
     super(RACE_SCENE_KEY);
@@ -95,10 +104,7 @@ export class RaceScene extends Phaser.Scene {
     return this.getCell(pos) === 'wall' ? 'wall' : null;
   }
 
-  /** How long the robot shakes in place after hitting a wall/boundary - a deliberate time cost for a mistake, not just a visual flourish. */
-  private static readonly BLOCKED_SHAKE_DURATION_MS = 1500;
-
-  private handleMoveForward = (): void => {
+  private handleMoveForward = (commandId: string): void => {
     if (this.animating) return;
 
     const delta = DIRECTION_DELTA[this.facing];
@@ -106,7 +112,7 @@ export class RaceScene extends Phaser.Scene {
     const blockReason = this.isBlocked(next);
 
     if (blockReason) {
-      this.shakeOnBlocked(blockReason);
+      this.shakeOnBlocked(blockReason, commandId);
       return;
     }
 
@@ -121,9 +127,17 @@ export class RaceScene extends Phaser.Scene {
       onComplete: () => {
         this.position = next;
         this.animating = false;
-        this.emitResult({ action: 'moved', position: next, facing: this.facing });
+        // Exactly one result per command, always - landing on the
+        // goal reports 'finished' INSTEAD of 'moved', not in
+        // addition to it. Emitting both here previously meant a
+        // caller only waiting for a single result (as
+        // useProgramRunner does per command) would miss the
+        // 'finished' event entirely, since it fired synchronously
+        // right after 'moved' with no listener left to catch it.
         if (this.getCell(next) === 'goal') {
-          this.emitResult({ action: 'finished', timeMs: 0 });
+          this.emitResult({ action: 'finished', timeMs: 0 }, commandId);
+        } else {
+          this.emitResult({ action: 'moved', position: next, facing: this.facing }, commandId);
         }
       },
     });
@@ -135,9 +149,12 @@ export class RaceScene extends Phaser.Scene {
    * tween-cycle-count math to control the total duration - the shake
    * tween itself just repeats indefinitely for the visual and gets
    * stopped when the timer fires, so the 1.5s penalty is exact
-   * regardless of how the wobble looks.
+   * regardless of how the wobble looks. `this.animating` stays true
+   * for this entire window, so no other command can execute -
+   * matched on the caller side by useProgramRunner not advancing to
+   * its next node until this exact commandId's result arrives.
    */
-  private shakeOnBlocked(reason: 'wall' | 'boundary'): void {
+  private shakeOnBlocked(reason: 'wall' | 'boundary', commandId: string): void {
     this.animating = true;
     const originX = this.robot.x;
     const originY = this.robot.y;
@@ -155,21 +172,21 @@ export class RaceScene extends Phaser.Scene {
       shakeTween.stop();
       this.robot.setPosition(originX, originY);
       this.animating = false;
-      this.emitResult({ action: 'blocked', reason, position: this.position });
+      this.emitResult({ action: 'blocked', reason, position: this.position }, commandId);
     });
   }
 
-  private handleTurnLeft = (): void => {
+  private handleTurnLeft = (commandId: string): void => {
     if (this.animating) return;
-    this.rotateRobot(TURN_LEFT[this.facing]);
+    this.rotateRobot(TURN_LEFT[this.facing], commandId);
   };
 
-  private handleTurnRight = (): void => {
+  private handleTurnRight = (commandId: string): void => {
     if (this.animating) return;
-    this.rotateRobot(TURN_RIGHT[this.facing]);
+    this.rotateRobot(TURN_RIGHT[this.facing], commandId);
   };
 
-  private rotateRobot(nextFacing: Direction): void {
+  private rotateRobot(nextFacing: Direction, commandId: string): void {
     this.animating = true;
     // NOTE: this tweens the raw rotation value, which can spin "the
     // long way around" between some facing pairs (e.g. W -> N) since
@@ -183,7 +200,7 @@ export class RaceScene extends Phaser.Scene {
       onComplete: () => {
         this.facing = nextFacing;
         this.animating = false;
-        this.emitResult({ action: 'turned', facing: nextFacing });
+        this.emitResult({ action: 'turned', facing: nextFacing }, commandId);
       },
     });
   }
@@ -193,6 +210,8 @@ export class RaceScene extends Phaser.Scene {
    * one is meant to work even while the robot is mid-shake or
    * mid-move, since it's the student's explicit "start over" action
    * and shouldn't be blocked by the very animation it's cancelling.
+   * Fire-and-forget: nothing waits on this result, so it carries no
+   * commandId.
    */
   private handleResetToStart = (): void => {
     this.tweens.killTweensOf(this.robot);
@@ -202,10 +221,10 @@ export class RaceScene extends Phaser.Scene {
     const pixel = gridToPixel(this.position);
     this.robot.setPosition(pixel.x, pixel.y);
     this.robot.setRotation(facingToRotation(this.facing));
-    this.emitResult({ action: 'moved', position: this.position, facing: this.facing });
+    this.emitResult({ action: 'moved', position: this.position, facing: this.facing }, null);
   };
 
-  private emitResult(step: RaceStep): void {
-    this.bridge.emit('result:step', step);
+  private emitResult(step: RaceStep, commandId: string | null): void {
+    this.bridge.emit('result:step', commandId, step);
   }
 }
