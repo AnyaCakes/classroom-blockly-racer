@@ -53,5 +53,5 @@ export type Program = ProgramNode[];
 export type RaceStep =
   | { action: 'moved'; position: GridPosition; facing: Direction }
   | { action: 'turned'; facing: Direction }
-  | { action: 'blocked'; reason: 'wall' | 'boundary'; position: GridPosition }
-  | { action: 'finished'; timeMs: number };
+  | { action: 'blocked'; reason: 'wall' | 'boundary'; position: GridPosition; facing: Direction }
+  | { action: 'finished'; timeMs: number; position: GridPosition; facing: Direction };

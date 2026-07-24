@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { practiceMaze } from '@racer/shared';
 import { useSocket } from './hooks/useSocket.js';
 import { useRoom } from './features/lobby/useRoom.js';
@@ -41,6 +41,20 @@ export function App() {
     leaveRoom();
     setView('roleSelect');
   };
+
+  // Covers teacher-initiated removal specifically: room:playerLeft
+  // (see useRoom.ts) clears `room` here without going through
+  // handleLeave, so without this, a removed student would land back
+  // on whichever pre-join screen `view` last held (typically the
+  // join form they originally filled out) instead of the actual
+  // starting screen. Harmless no-op for every other case room
+  // becomes null (initial mount, or handleLeave's own deliberate
+  // leave, which already sets this explicitly).
+  useEffect(() => {
+    if (room === null) {
+      setView('roleSelect');
+    }
+  }, [room]);
 
   // A student who has already finished the current race practices
   // freely on an open grid instead of sitting idle - same maze for

@@ -135,7 +135,7 @@ export class RaceScene extends Phaser.Scene {
         // 'finished' event entirely, since it fired synchronously
         // right after 'moved' with no listener left to catch it.
         if (this.getCell(next) === 'goal') {
-          this.emitResult({ action: 'finished', timeMs: 0 }, commandId);
+          this.emitResult({ action: 'finished', timeMs: 0, position: next, facing: this.facing }, commandId);
         } else {
           this.emitResult({ action: 'moved', position: next, facing: this.facing }, commandId);
         }
@@ -172,7 +172,7 @@ export class RaceScene extends Phaser.Scene {
       shakeTween.stop();
       this.robot.setPosition(originX, originY);
       this.animating = false;
-      this.emitResult({ action: 'blocked', reason, position: this.position }, commandId);
+      this.emitResult({ action: 'blocked', reason, position: this.position, facing: this.facing }, commandId);
     });
   }
 

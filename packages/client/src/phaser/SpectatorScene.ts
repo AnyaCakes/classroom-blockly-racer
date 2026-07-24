@@ -104,6 +104,29 @@ export class SpectatorScene extends Phaser.Scene {
     // cosmetic.
     const robot = this.robots.get(clientId) ?? this.createRobot(clientId, 'blue', true);
 
+    // Cancel whatever animation was still in flight for this robot -
+    // otherwise a fast-arriving event (e.g. 'blocked' shortly after a
+    // 'moved') could have its resync immediately overwritten by the
+    // tail end of the previous tween, which keeps writing to the
+    // robot's x/y/rotation every frame until it naturally finishes.
+    // A new event always fully supersedes whatever was happening
+    // before it.
+    this.tweens.killTweensOf(robot);
+
+    // Every branch below sets an ABSOLUTE target (from the step's own
+    // position/facing), never a relative offset from wherever this
+    // robot currently happens to be rendered. That's deliberate: this
+    // scene has no way to verify a rendered robot is actually where
+    // the student's own (authoritative) RaceScene says it is between
+    // events, so every single event is treated as a full resync
+    // opportunity, not just a delta. A previous version only did this
+    // for 'moved' and left 'blocked' as a relative bump off the
+    // robot's current rendered x - if anything ever nudged that
+    // rendered position even slightly (a missed event, overlapping
+    // tweens, network hiccup), the mismatch had no way to correct
+    // itself until the next successful move, which could be a while
+    // if the student kept hitting walls or just turning in the
+    // meantime. Full resync on every event closes that off entirely.
     switch (step.action) {
       case 'moved': {
         const pixel = gridToPixel(step.position);
@@ -122,16 +145,22 @@ export class SpectatorScene extends Phaser.Scene {
         break;
       }
       case 'blocked': {
-        // No repositioning needed - the student's own client already
-        // stayed in place on collision, so this robot is already at
-        // the right spot. Just a quick visual bump; unlike the
-        // student's own 1.5s penalty, there's nothing to gate here -
-        // this is a spectator view, not an execution pipeline.
+        const pixel = gridToPixel(step.position);
+        robot.setPosition(pixel.x, pixel.y);
+        robot.setRotation(facingToRotation(step.facing));
+        // Visual bump on top of the resync above - purely cosmetic
+        // feedback that something went wrong, not a positioning
+        // mechanism. There's nothing to gate here (unlike the
+        // student's own 1.5s penalty) - this is a spectator view,
+        // not an execution pipeline.
         const originX = robot.x;
         this.tweens.add({ targets: robot, x: originX + 4, duration: 60, yoyo: true, repeat: 3 });
         break;
       }
       case 'finished': {
+        const pixel = gridToPixel(step.position);
+        robot.setPosition(pixel.x, pixel.y);
+        robot.setRotation(facingToRotation(step.facing));
         this.tweens.add({ targets: robot, scale: 1.4, duration: 200, yoyo: true, repeat: 1 });
         break;
       }

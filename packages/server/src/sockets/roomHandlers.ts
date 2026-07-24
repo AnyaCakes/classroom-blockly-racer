@@ -68,6 +68,17 @@ export function registerRoomHandlers(io: AppServer, socket: AppSocket, roomManag
     const updated = roomManager.removePlayer(roomCode, playerId);
     if (!updated) return;
 
+    // Broadcast BEFORE the removed socket leaves the room channel -
+    // io.to(roomCode) only reaches sockets currently in that room,
+    // so this order is what actually gets the removed student their
+    // own room:playerLeft event (which useRoom.ts uses to reset
+    // their local room/role state back to the role-select screen).
+    // Broadcasting after they'd already left meant they silently
+    // never received it and stayed stuck on whatever screen they
+    // were on, with only a room:error toast that doesn't reset
+    // anything.
+    io.to(roomCode).emit('room:playerLeft', playerId);
+
     const removedSocket = io.sockets.sockets.get(playerId);
     if (removedSocket) {
       removedSocket.leave(roomCode);
@@ -75,7 +86,6 @@ export function registerRoomHandlers(io: AppServer, socket: AppSocket, roomManag
       removedSocket.emit('room:error', 'You were removed from the room by the teacher.');
     }
 
-    io.to(roomCode).emit('room:playerLeft', playerId);
     io.to(roomCode).emit('room:state', updated);
   });
 

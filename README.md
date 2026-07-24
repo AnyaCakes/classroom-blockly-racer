@@ -6,6 +6,36 @@ by programming a robot with Blockly; first to the goal wins.
 
 ## Status
 
+**Since Milestone 6 (part 2):** fixed teacher-initiated student
+removal not actually returning the removed student to the start
+screen. Root cause was a server-side ordering bug: the removed
+socket left the Socket.IO room *before* the server broadcast
+`room:playerLeft` to that room - since room broadcasts only reach
+current members, the removed student never received the event their
+own client needs to reset its local state, and was left stuck on
+whatever screen they'd been on with only a `room:error` toast that
+doesn't reset anything. Fixed by broadcasting first, then leaving.
+Also added a small client-side safety net: resetting the pre-join
+`view` state whenever `room` becomes `null`, so a removed student
+lands on the true starting screen rather than whichever join form
+they'd originally filled out.
+
+**Since Milestone 6:** fixed a real desync bug found in testing -
+after a student hit a wall and then kept going, the teacher's
+dashboard robot for that student could stop accurately following
+them. Root cause: `SpectatorScene` only did an *absolute* resync
+(snap to the exact reported position/rotation) on `'moved'` events;
+`'blocked'` only nudged the robot relative to wherever it currently
+happened to be rendered, and didn't even carry the robot's facing to
+resync rotation with. Any drift introduced there had no way to
+self-correct until the next successful move. Fixed by making every
+event type (`moved`, `turned`, `blocked`, `finished`) carry full
+position+facing and perform an absolute resync, and by killing any
+in-flight tween before applying a new event so a stale animation
+can't overwrite a fresh resync. Also closed a related gap: `finished`
+never carried the robot's landing position at all, so a dashboard
+robot that just won would stay frozen one tile short of the goal.
+
 **Milestone 6 of 8** — teacher dashboard live view. The teacher gets
 a dedicated screen while racing (no longer the student's Blockly
 workspace) showing: the room code, active maze name, a live elapsed
