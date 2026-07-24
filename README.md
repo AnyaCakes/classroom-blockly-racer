@@ -13,10 +13,15 @@ this is "new harder mazes only" progressive unlocking, not a global
 toggle):
 
 - **`repeat [N] times`** - unlocked on **Loop Alley** (`loops`).
-- **`if wall ahead / else`** - unlocked on **Zigzag Trail**
-  (`loops` + `conditionals`). No general boolean expressions -
-  a fixed sensor check, deliberately scoped that way (comparisons/
-  variables are a later pass, not this one).
+- **`if wall ahead / else`** - unlocked on **Ring Maze** and
+  **Zigzag Trail** (`loops` + `conditionals`). Ring Maze is a clean
+  3-sided perimeter where one uniform rule ("if wall ahead, turn
+  right, else move forward") solves the whole thing - a gentler
+  first introduction to the conditional block. Zigzag Trail is the
+  harder follow-up, deliberately requiring mixed left/right turns so
+  a single reflexive rule doesn't trivially solve it. No general
+  boolean expressions - a fixed sensor check, deliberately scoped
+  that way (comparisons/variables are a later pass, not this one).
 
 Both nest arbitrarily (a loop inside a conditional inside a loop,
 etc.) - this is the first real payoff of the interpreter's
