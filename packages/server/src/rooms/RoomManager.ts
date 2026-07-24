@@ -23,8 +23,6 @@ type TimerKey = string; // `${roomCode}:${clientId}`
 export class RoomManager {
   private rooms = new Map<string, Room>();
   private disconnectTimers = new Map<TimerKey, NodeJS.Timeout>();
-  /** When the current race started, per room - the basis for server-authoritative finish timing. */
-  private raceStartedAt = new Map<string, number>();
   /** Finish order for the current race, per room - pushed to in finish order, so the array index IS the rank. */
   private finishOrder = new Map<string, LeaderboardEntry[]>();
 
@@ -56,6 +54,7 @@ export class RoomManager {
       status: 'lobby',
       players: [],
       currentMazeId: null,
+      raceStartedAt: null,
       createdAt: Date.now(),
     };
     this.rooms.set(code, room);
@@ -194,8 +193,8 @@ export class RoomManager {
 
     room.status = 'racing';
     room.currentMazeId = mazeId;
+    room.raceStartedAt = Date.now();
     room.players.forEach((p) => (p.finished = false));
-    this.raceStartedAt.set(code, Date.now());
     this.finishOrder.set(code, []);
     return room;
   }
@@ -206,8 +205,8 @@ export class RoomManager {
 
     room.status = 'lobby';
     room.currentMazeId = null;
+    room.raceStartedAt = null;
     room.players.forEach((p) => (p.finished = false));
-    this.raceStartedAt.delete(code);
     this.finishOrder.delete(code);
     return room;
   }
@@ -229,8 +228,7 @@ export class RoomManager {
     const player = room.players.find((p) => p.id === playerId);
     if (!player || player.finished) return null;
 
-    const startedAt = this.raceStartedAt.get(code);
-    const timeMs = startedAt ? Date.now() - startedAt : 0;
+    const timeMs = room.raceStartedAt ? Date.now() - room.raceStartedAt : 0;
 
     player.finished = true;
 

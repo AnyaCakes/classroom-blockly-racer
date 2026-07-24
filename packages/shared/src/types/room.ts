@@ -28,6 +28,8 @@ export interface Room {
   status: RoomStatus;
   players: Player[];
   currentMazeId: string | null;
+  /** When the current race started (server clock), null when not racing - the basis for the teacher dashboard's elapsed timer and for server-authoritative finish timing. */
+  raceStartedAt: number | null;
   createdAt: number;
 }
 

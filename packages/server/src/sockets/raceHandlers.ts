@@ -49,12 +49,13 @@ export function registerRaceHandlers(io: AppServer, socket: AppSocket, roomManag
     const room = roomManager.getRoom(roomCode);
     if (!room || room.status !== 'racing') return;
 
-    // Relayed to everyone else in the room, not consumed by any
-    // client yet - Milestone 6's teacher dashboard is the first
-    // actual consumer of this event. Deliberately excludes the
-    // sender (socket.to, not io.to) since a client already has its
-    // own movement locally; it only needs to hear about others.
-    socket.to(roomCode).emit('race:opponentProgress', socket.id, step);
+    // Relayed to everyone else in the room - the teacher dashboard
+    // is the consumer. Identified by the sender's stable clientId,
+    // NOT socket.id: a student's socket id changes on every
+    // reconnect, but the dashboard's robot map needs one consistent
+    // key per student for the whole race, or a reconnect would spawn
+    // a second robot instead of updating the existing one.
+    socket.to(roomCode).emit('race:opponentProgress', socket.data.clientId, step);
   });
 
   socket.on('race:finish', (roomCode, _clientReportedTimeMs) => {

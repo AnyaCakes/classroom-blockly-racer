@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { useRef } from 'react';
 import type { LeaderboardEntry, MazeDefinition, SpriteColorId } from '@racer/shared';
 import type { AppSocket } from '../../hooks/useSocket.js';
-import type { LobbyRole } from '../lobby/useRoom.js';
 import { RaceCanvas } from './RaceCanvas.js';
 import { BlocklyWorkspace, type BlocklyWorkspaceHandle } from '../../blockly/BlocklyWorkspace.js';
 import { useProgramRunner } from './useProgramRunner.js';
@@ -11,7 +10,6 @@ import { LeaderboardPanel } from './LeaderboardPanel.js';
 
 interface Props {
   maze: MazeDefinition;
-  role: LobbyRole;
   robotColor?: SpriteColorId;
   socket: AppSocket;
   roomCode: string;
@@ -24,10 +22,9 @@ interface Props {
    * student who just finished still wants to see the results.
    */
   leaderboard: LeaderboardEntry[];
-  onResetRace: () => void;
 }
 
-export function RaceScreen({ maze, role, robotColor, socket, roomCode, isPractice, leaderboard, onResetRace }: Props) {
+export function RaceScreen({ maze, robotColor, socket, roomCode, isPractice, leaderboard }: Props) {
   // One bridge instance per mount, shared between the canvas (which
   // hands it to the Phaser scene), the program runner (which emits
   // command:* events into it), and progress reporting (which listens
@@ -38,7 +35,7 @@ export function RaceScreen({ maze, role, robotColor, socket, roomCode, isPractic
   }
   const blocklyRef = useRef<BlocklyWorkspaceHandle>(null);
   const { running, message, run, cancelRun, resetRobot } = useProgramRunner(bridgeRef.current);
-  useRaceProgressReporting(bridgeRef.current, socket, roomCode, !isPractice && role === 'student');
+  useRaceProgressReporting(bridgeRef.current, socket, roomCode, !isPractice);
 
   const handleRun = () => {
     const program = blocklyRef.current?.getProgram() ?? [];
@@ -86,7 +83,6 @@ export function RaceScreen({ maze, role, robotColor, socket, roomCode, isPractic
         </button>
         <button onClick={handleResetSprite}>Reset Sprite</button>
         <button onClick={handleClearWorkArea}>Clear Work Area</button>
-        {role === 'teacher' && <button onClick={onResetRace}>End race, back to lobby</button>}
       </div>
 
       {message && (

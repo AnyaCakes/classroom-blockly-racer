@@ -38,6 +38,7 @@ export interface ServerToClientEvents {
   'room:playerLeft': (playerId: string) => void;
   'room:error': (message: string) => void;
   'race:started': (maze: MazeDefinition) => void;
+  /** playerId here is the sender's stable clientId, not their (reconnect-volatile) socket id - see raceHandlers.ts. */
   'race:opponentProgress': (playerId: string, step: RaceStep) => void;
   'race:leaderboard': (results: LeaderboardEntry[]) => void;
 }

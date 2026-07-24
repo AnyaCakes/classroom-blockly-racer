@@ -9,6 +9,7 @@ import { CreateRoomScreen } from './features/lobby/CreateRoomScreen.js';
 import { JoinRoomScreen } from './features/lobby/JoinRoomScreen.js';
 import { LobbyScreen } from './features/lobby/LobbyScreen.js';
 import { RaceScreen } from './features/race/RaceScreen.js';
+import { TeacherDashboardScreen } from './features/teacher/TeacherDashboardScreen.js';
 
 type View = 'roleSelect' | 'creatingRoom' | 'joiningRoom' | 'lobby';
 
@@ -55,22 +56,34 @@ export function App() {
       {!connected && <p style={{ color: 'crimson' }}>Connecting to server...</p>}
 
       {room?.status === 'racing' && activeMaze ? (
-        <RaceScreen
-          // Forces a clean remount (fresh Phaser game, fresh Blockly
-          // workspace) when a student's activeMaze switches between
-          // the real race maze and the practice grid - simpler and
-          // more robust than trying to hot-swap the maze inside a
-          // single long-lived RaceScreen instance.
-          key={activeMaze.id}
-          maze={activeMaze}
-          role={role}
-          robotColor={myPlayer?.color}
-          socket={socket}
-          roomCode={room.code}
-          isPractice={isPractice}
-          leaderboard={leaderboard}
-          onResetRace={resetRace}
-        />
+        role === 'teacher' ? (
+          <TeacherDashboardScreen
+            key={activeMaze.id}
+            maze={activeMaze}
+            roomCode={room.code}
+            raceStartedAt={room.raceStartedAt}
+            players={room.players}
+            leaderboard={leaderboard}
+            socket={socket}
+            onRemovePlayer={removePlayer}
+            onResetRace={resetRace}
+          />
+        ) : (
+          <RaceScreen
+            // Forces a clean remount (fresh Phaser game, fresh Blockly
+            // workspace) when a student's activeMaze switches between
+            // the real race maze and the practice grid - simpler and
+            // more robust than trying to hot-swap the maze inside a
+            // single long-lived RaceScreen instance.
+            key={activeMaze.id}
+            maze={activeMaze}
+            robotColor={myPlayer?.color}
+            socket={socket}
+            roomCode={room.code}
+            isPractice={isPractice}
+            leaderboard={leaderboard}
+          />
+        )
       ) : room ? (
         <LobbyScreen
           room={room}
