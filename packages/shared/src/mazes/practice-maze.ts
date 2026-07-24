@@ -13,7 +13,7 @@ export const practiceMaze: MazeDefinition = {
   id: 'practice-grid',
   name: 'Practice Grid',
   difficulty: 'beginner',
-  allowedBlocks: ['sequence'],
+  allowedBlocks: ['sequence', 'loops'],
   width: 8,
   height: 8,
   grid: Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => 'floor' as const)),

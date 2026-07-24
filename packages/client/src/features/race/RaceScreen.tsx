@@ -13,8 +13,18 @@ interface Props {
   robotColor?: SpriteColorId;
   socket: AppSocket;
   roomCode: string;
-  /** True once this student has already finished the current race - maze will be the practice grid, not the real race maze, in that case. */
+  /** True whenever this isn't a real race attempt (practice grid after finishing, or solo Practice Mode) - disables server progress reporting in both cases. */
   isPractice: boolean;
+  /**
+   * True only when this student actually just finished a real race
+   * and was moved here as a result - shows the "you finished!"
+   * banner. Deliberately separate from `isPractice`: solo Practice
+   * Mode also sets isPractice (no server reporting there either) but
+   * never sets this, since nobody "finished a race" by opening
+   * Practice Mode from the home screen - showing that banner there
+   * would be actively wrong, not just unnecessary.
+   */
+  showFinishedBanner?: boolean;
   /**
    * Lifted up to App (not computed here) so it survives the full
    * remount that happens when a student transitions into practice
@@ -24,7 +34,7 @@ interface Props {
   leaderboard: LeaderboardEntry[];
 }
 
-export function RaceScreen({ maze, robotColor, socket, roomCode, isPractice, leaderboard }: Props) {
+export function RaceScreen({ maze, robotColor, socket, roomCode, isPractice, showFinishedBanner, leaderboard }: Props) {
   // One bridge instance per mount, shared between the canvas (which
   // hands it to the Phaser scene), the program runner (which emits
   // command:* events into it), and progress reporting (which listens
@@ -62,7 +72,7 @@ export function RaceScreen({ maze, robotColor, socket, roomCode, isPractice, lea
     <section>
       <h2>{maze.name}</h2>
 
-      {isPractice && (
+      {showFinishedBanner && (
         <p style={{ background: '#eef6ff', border: '1px solid #bcd8f7', borderRadius: 8, padding: '0.5rem 0.75rem' }}>
           🎉 You finished the race! Keep practicing freely here until your teacher starts the next one.
         </p>

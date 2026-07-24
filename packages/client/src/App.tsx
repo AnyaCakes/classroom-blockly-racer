@@ -97,6 +97,7 @@ export function App() {
             socket={socket}
             roomCode={room.code}
             isPractice={isPractice}
+            showFinishedBanner={isPractice}
             leaderboard={leaderboard}
           />
         )

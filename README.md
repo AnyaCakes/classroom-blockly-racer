@@ -6,6 +6,22 @@ by programming a robot with Blockly; first to the goal wins.
 
 ## Status
 
+**Since Milestone 7 (part 3):** two Practice Mode fixes.
+
+1. **Loops unlocked on the Practice Grid.** `allowedBlocks` was still
+   `['sequence']` only - now includes `'loops'`, since a
+   free-experimentation sandbox is exactly where a student most wants
+   to play with repeat blocks.
+2. **Fixed a real bug**: solo Practice Mode (pick any maze from the
+   home screen, no room) was showing "🎉 You finished the race!" the
+   whole time, since it reused the same `isPractice` flag a student
+   moved to the practice grid *after actually finishing a race* also
+   uses. `isPractice` still correctly disables server reporting in
+   both cases, but a new, separate `showFinishedBanner` prop on
+   `RaceScreen` now controls the banner specifically - only ever true
+   for the real post-race transition, never for solo Practice Mode,
+   since nobody "finished a race" by just opening the practice picker.
+
 **Since Milestone 7 (part 2):** two additions.
 
 1. **Single-block dragging.** Grabbing a block out of the middle of a
