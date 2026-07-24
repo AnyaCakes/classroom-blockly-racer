@@ -6,6 +6,45 @@ by programming a robot with Blockly; first to the goal wins.
 
 ## Status
 
+**Since Milestone 7 (part 2):** two additions.
+
+1. **Single-block dragging.** Grabbing a block out of the middle of a
+   stack used to drag that block *and* everything connected below it
+   - annoying when you just want to move or delete one block. Now
+   every drag acts on a single block only, automatically reconnecting
+   the block above to the block below (Blockly calls this "healing
+   the stack"). This is Blockly's own built-in behavior - normally
+   opt-in via holding Ctrl/Cmd while dragging - made the default for
+   every drag instead, via a custom `BlockDragStrategy` subclass (see
+   `blockDefinitions.ts`). **Flagging honestly: this was implemented
+   from Blockly's documented dragging API, not verified against a
+   running build** (no way to execute drag interactions in this
+   environment) - the exact method (`setDragStrategy`) should be
+   double-checked against whatever Blockly version actually resolves
+   at `npm install` time. If it doesn't compile or doesn't work,
+   that's the first thing to look at, not a sign the whole approach
+   is wrong.
+2. **Practice Mode.** The home screen's "who's joining" choice now
+   has a third option, "Just practice" - picks any existing maze
+   (including the open Practice Grid) and plays it solo, no room, no
+   teacher, no leaderboard, no server reporting. Entirely a reuse of
+   `RaceScreen` with `isPractice` forced on, same mechanism a
+   finished student's practice grid already used - no new execution
+   logic needed.
+
+**Since Milestone 7:** an unsuccessful run (every block executes but
+the robot never reaches the goal) now automatically resets the
+sprite back to the maze's start, instead of leaving it wherever
+execution stopped. Previously, clicking Run again after a failed run
+continued from that resting position - letting a student
+incrementally nudge the robot forward across repeated Run clicks
+without ever reasoning about the whole program. Every Run click is
+now a genuine fresh attempt from the top. Reset Sprite's role shifts
+accordingly: its job is no longer "clean up after a failed run" (now
+automatic) but "abort a run that's still in progress" - functionality
+it already had (`cancelRun` was always callable mid-run), just now
+its primary reason to exist rather than an edge case.
+
 **Milestone 7 of 8** — progressive block unlocking: loops and
 conditionals. Two new blocks, available only on mazes whose
 `allowedBlocks` includes them (existing mazes stay sequencing-only -

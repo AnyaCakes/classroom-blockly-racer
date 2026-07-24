@@ -90,7 +90,12 @@ export function RaceScreen({ maze, robotColor, socket, roomCode, isPractice, lea
           role="status"
           style={{
             marginTop: '0.5rem',
-            color: message.kind === 'blocked' ? '#b45309' : '#15803d',
+            color:
+              message.kind === 'blocked'
+                ? '#b45309'
+                : message.kind === 'finished'
+                  ? '#15803d'
+                  : '#475569',
             fontWeight: 600,
           }}
         >

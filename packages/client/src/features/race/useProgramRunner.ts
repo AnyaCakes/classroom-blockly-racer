@@ -4,7 +4,7 @@ import type { Program, RaceStep } from '@racer/shared';
 import { runProgram } from '@racer/shared';
 
 export interface RunMessage {
-  kind: 'blocked' | 'finished';
+  kind: 'blocked' | 'finished' | 'incomplete';
   text: string;
 }
 
@@ -38,6 +38,19 @@ let commandSeq = 0;
  * the next block in the program. Only 'finished' (reached the goal)
  * or an explicit cancel (Reset Sprite / Clear Work Area) actually
  * end a run early.
+ *
+ * If a run exhausts every block WITHOUT reaching the goal, it
+ * auto-resets the robot back to the maze's start (same command Reset
+ * Sprite uses) rather than leaving it wherever execution stopped.
+ * This is deliberate: previously, clicking Run again after an
+ * unsuccessful run continued from that resting position, which let a
+ * student incrementally nudge the robot forward across several Run
+ * clicks without ever reasoning about the whole program at once.
+ * Auto-resetting means every Run click is a genuine full attempt from
+ * the top - Reset Sprite's role shifts accordingly, from "clean up
+ * after a failed run" (now automatic) to "abort a run that's still in
+ * progress" (its cancelRun call already supported this from the
+ * start, unrelated to this change).
  */
 export function useProgramRunner(bridge: Phaser.Events.EventEmitter): UseProgramRunnerResult {
   const [running, setRunning] = useState(false);
@@ -138,7 +151,18 @@ export function useProgramRunner(bridge: Phaser.Events.EventEmitter): UseProgram
           }
         }
 
+        // The generator finished (every block executed) without ever
+        // hitting 'finished' - the program didn't solve the maze.
+        // Auto-reset back to start rather than leaving the robot
+        // wherever it happened to stop: otherwise clicking Run again
+        // would silently continue from that resting position instead
+        // of being a genuine fresh attempt.
         onHighlight(null);
+        bridge.emit('command:resetToStart');
+        setMessage({
+          kind: 'incomplete',
+          text: "Your program finished, but you didn't reach the goal - the sprite has been reset. Fix your code and try again!",
+        });
         setRunning(false);
       })();
     },

@@ -10,8 +10,9 @@ import { JoinRoomScreen } from './features/lobby/JoinRoomScreen.js';
 import { LobbyScreen } from './features/lobby/LobbyScreen.js';
 import { RaceScreen } from './features/race/RaceScreen.js';
 import { TeacherDashboardScreen } from './features/teacher/TeacherDashboardScreen.js';
+import { PracticeModeScreen } from './features/practice/PracticeModeScreen.js';
 
-type View = 'roleSelect' | 'creatingRoom' | 'joiningRoom' | 'lobby';
+type View = 'roleSelect' | 'creatingRoom' | 'joiningRoom' | 'practiceMode';
 
 export function App() {
   const { socket, connected } = useSocket();
@@ -63,9 +64,10 @@ export function App() {
   const activeMaze = isPractice ? practiceMaze : raceMaze;
 
   const isRacing = room?.status === 'racing' && activeMaze !== null;
+  const isWideLayout = isRacing || view === 'practiceMode';
 
   return (
-    <main style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: isRacing ? 1100 : 720 }}>
+    <main style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: isWideLayout ? 1100 : 720 }}>
       <h1>Classroom Blockly Racer</h1>
       {!connected && <p style={{ color: 'crimson' }}>Connecting to server...</p>}
 
@@ -113,9 +115,12 @@ export function App() {
             clearError();
             setView('joiningRoom');
           }}
+          onSelectPractice={() => setView('practiceMode')}
         />
       ) : view === 'creatingRoom' ? (
         <CreateRoomScreen onCreate={createRoom} />
+      ) : view === 'practiceMode' ? (
+        <PracticeModeScreen socket={socket} onExit={() => setView('roleSelect')} />
       ) : (
         <JoinRoomScreen onJoin={joinRoom} error={error} />
       )}
