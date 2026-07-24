@@ -14,11 +14,12 @@ interface Props {
 export function TeacherDashboardCanvas({ maze, bridge, initialPlayers }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  // See RaceCanvas.tsx for why this is computed here (not just
+  // inside the effect) and used for the container's aspect-ratio CSS.
+  const { width, height } = mazePixelDimensions(maze.width, maze.height);
 
   useEffect(() => {
     if (!containerRef.current) return;
-
-    const { width, height } = mazePixelDimensions(maze.width, maze.height);
 
     const game = new Phaser.Game({
       type: Phaser.AUTO,
@@ -49,6 +50,10 @@ export function TeacherDashboardCanvas({ maze, bridge, initialPlayers }: Props) 
   }, []);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', maxWidth: 900 }} data-scene={SPECTATOR_SCENE_KEY} />
+    <div
+      ref={containerRef}
+      style={{ width: '100%', maxWidth: 900, aspectRatio: `${width} / ${height}` }}
+      data-scene={SPECTATOR_SCENE_KEY}
+    />
   );
 }

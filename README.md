@@ -6,6 +6,22 @@ by programming a robot with Blockly; first to the goal wins.
 
 ## Status
 
+**Since Milestone 7 (part 4):** fixed the maze canvas progressively
+"zooming in" over time, reported on both the student's race view and
+the teacher's dashboard, independent of screen size. Root cause: the
+Phaser canvas's container `<div>` had no explicit height - just
+`width: 100%`, leaving height to be determined by its own content
+(the canvas Phaser puts inside it). But modern Phaser's `Scale.FIT`
+mode watches its parent container with a `ResizeObserver` and refits
+whenever that container's *measured* size changes - creating a
+circular dependency (container height depends on canvas size, canvas
+size depends on container height) that could drift further with each
+refit cycle. Fixed by giving the container an explicit height via
+CSS `aspect-ratio`, computed from the same maze dimensions already
+used for the Phaser Game's internal resolution - height is now a
+pure function of width, decided by the browser before Phaser ever
+measures anything, with nothing left to feed a loop.
+
 **Since Milestone 7 (part 3):** two Practice Mode fixes.
 
 1. **Loops unlocked on the Practice Grid.** `allowedBlocks` was still

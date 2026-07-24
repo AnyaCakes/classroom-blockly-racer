@@ -22,11 +22,16 @@ interface Props {
 export function RaceCanvas({ maze, bridge, robotColor }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  // Computed once per mount (maze is stable for this component's
+  // lifetime - a maze change always triggers a full remount via the
+  // key={maze.id} pattern at every call site), used both for the
+  // Phaser Game's internal resolution AND the container's CSS aspect
+  // ratio below - the two need to agree, since disagreement between
+  // them is exactly what created the sizing feedback loop this fixes.
+  const { width, height } = mazePixelDimensions(maze.width, maze.height);
 
   useEffect(() => {
     if (!containerRef.current) return;
-
-    const { width, height } = mazePixelDimensions(maze.width, maze.height);
 
     const game = new Phaser.Game({
       type: Phaser.AUTO,
@@ -61,5 +66,20 @@ export function RaceCanvas({ maze, bridge, robotColor }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <div ref={containerRef} style={{ width: '100%', maxWidth: 640 }} data-scene={RACE_SCENE_KEY} />;
+  return (
+    <div
+      ref={containerRef}
+      // aspectRatio gives the container a real, explicit height
+      // (computed by the browser purely from its width) instead of
+      // an implicit one derived from its content. Without this, the
+      // container's height depended on the canvas Phaser put inside
+      // it, and the canvas's size (via Scale.FIT) depended on the
+      // container's measured size - a circular dependency that
+      // Phaser's ResizeObserver-driven refitting could progressively
+      // drift through on each cycle, which is what "zooming in over
+      // time" actually was.
+      style={{ width: '100%', maxWidth: 640, aspectRatio: `${width} / ${height}` }}
+      data-scene={RACE_SCENE_KEY}
+    />
+  );
 }
