@@ -52,11 +52,8 @@ export function useRoom(socket: AppSocket, connected: boolean): UseRoomResult {
     };
   }, [socket]);
 
-  // If we already have a room in localStorage-equivalent (sessionStorage
-  // clientId) and the socket reconnects, try to silently rejoin as
-  // teacher. Students rejoin implicitly the next time they submit the
-  // join form with the same clientId - RoomManager treats that as a
-  // reconnect rather than a fresh join.
+  // If we already have a room and the socket reconnects, try to
+  // silently rejoin as teacher.
   useEffect(() => {
     if (!connected || !room || role !== 'teacher') return;
     socket.emit('room:rejoinTeacher', room.code, clientId, (result) => {
@@ -64,6 +61,43 @@ export function useRoom(socket: AppSocket, connected: boolean): UseRoomResult {
         setRoom(result.room);
       }
     });
+    // Only re-run when the connection itself changes, not on every room update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected]);
+
+  // Same idea for students, via room:join rather than a dedicated
+  // event - RoomManager.joinRoom already special-cases "clientId
+  // matches an existing player" as a reconnect (updates their socket
+  // id, flips connected back to true, cancels the disconnect-removal
+  // timer) rather than a fresh join, regardless of room status. This
+  // was previously missing entirely: nothing told the server a
+  // reconnected student's new socket belonged to their existing
+  // Player record, so they'd sit shown as "disconnected" in the
+  // roster until the 30s grace period expired and removed them -
+  // the socket-level reconnect succeeded, but the server never found
+  // out which player it belonged to. Re-submitting the same
+  // nickname/color they already have (from their own entry in the
+  // last known room snapshot) makes this fully silent - no form, no
+  // visible interruption.
+  useEffect(() => {
+    if (!connected || !room || role !== 'student') return;
+    const previousSelf = room.players.find((p) => p.clientId === clientId);
+    if (!previousSelf) return;
+    socket.emit(
+      'room:join',
+      room.code,
+      previousSelf.nickname,
+      previousSelf.color,
+      clientId,
+      (result) => {
+        if (result.ok) {
+          setRoom(result.room);
+        }
+        // A failure here (e.g. room genuinely gone) isn't surfaced
+        // as an error - same silent-best-effort behavior as the
+        // teacher's rejoin above.
+      }
+    );
     // Only re-run when the connection itself changes, not on every room update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected]);

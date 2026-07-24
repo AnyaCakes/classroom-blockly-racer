@@ -6,6 +6,18 @@ by programming a robot with Blockly; first to the goal wins.
 
 ## Status
 
+**Since deployment:** fixed a real bug found during cross-device
+testing - a reconnected student's socket came back fine at the
+transport level, but nothing told the server which `Player` record
+the new socket belonged to (the teacher had this via
+`room:rejoinTeacher`; students never had an equivalent). They'd sit
+shown as "disconnected" in the roster until the 30s grace period
+expired and removed them, even though they were actually back online.
+Fixed by giving students the same silent auto-rejoin the teacher
+already had, reusing `room:join` (see `useRoom.ts` - `RoomManager`
+already treated a matching `clientId` as a reconnect, the client just
+never told it to).
+
 **Milestone 5 of 8** — race mechanics. Every student in a room races
 the same maze simultaneously and independently (each solves it at
 their own pace, on their own local Phaser/Blockly instance). The
