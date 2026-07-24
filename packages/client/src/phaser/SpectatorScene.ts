@@ -164,6 +164,13 @@ export class SpectatorScene extends Phaser.Scene {
         this.tweens.add({ targets: robot, scale: 1.4, duration: 200, yoyo: true, repeat: 1 });
         break;
       }
+      case 'sensor':
+        // Never actually arrives here - useRaceProgressReporting
+        // filters sensor checks out before they're sent, since a
+        // condition check isn't a robot action there's anything to
+        // render for. Handled explicitly anyway so this switch stays
+        // exhaustive rather than silently ignoring an unhandled case.
+        break;
     }
   };
 }

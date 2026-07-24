@@ -73,7 +73,7 @@ export function RaceScreen({ maze, robotColor, socket, roomCode, isPractice, lea
           <RaceCanvas maze={maze} bridge={bridgeRef.current} robotColor={robotColor} />
         </div>
         <div style={{ flex: '1 1 380px', minWidth: 300 }}>
-          <BlocklyWorkspace ref={blocklyRef} />
+          <BlocklyWorkspace ref={blocklyRef} allowedBlocks={maze.allowedBlocks} />
         </div>
       </div>
 

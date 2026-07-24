@@ -26,6 +26,12 @@ export function useRaceProgressReporting(
     if (!active) return;
 
     const handler = (_commandId: string | null, step: RaceStep) => {
+      // Sensor checks ('if wall ahead') aren't a robot action - the
+      // robot doesn't move or turn, so there's nothing for an
+      // opponent-progress view to render. Reporting these would just
+      // be noise on the wire and on the teacher's dashboard.
+      if (step.action === 'sensor') return;
+
       socket.emit('race:progress', roomCode, step);
       if (step.action === 'finished') {
         // The timeMs argument is ignored server-side (see

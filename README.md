@@ -6,86 +6,48 @@ by programming a robot with Blockly; first to the goal wins.
 
 ## Status
 
-**Since Milestone 6 (part 2):** fixed teacher-initiated student
-removal not actually returning the removed student to the start
-screen. Root cause was a server-side ordering bug: the removed
-socket left the Socket.IO room *before* the server broadcast
-`room:playerLeft` to that room - since room broadcasts only reach
-current members, the removed student never received the event their
-own client needs to reset its local state, and was left stuck on
-whatever screen they'd been on with only a `room:error` toast that
-doesn't reset anything. Fixed by broadcasting first, then leaving.
-Also added a small client-side safety net: resetting the pre-join
-`view` state whenever `room` becomes `null`, so a removed student
-lands on the true starting screen rather than whichever join form
-they'd originally filled out.
+**Milestone 7 of 8** — progressive block unlocking: loops and
+conditionals. Two new blocks, available only on mazes whose
+`allowedBlocks` includes them (existing mazes stay sequencing-only -
+this is "new harder mazes only" progressive unlocking, not a global
+toggle):
 
-**Since Milestone 6:** fixed a real desync bug found in testing -
-after a student hit a wall and then kept going, the teacher's
-dashboard robot for that student could stop accurately following
-them. Root cause: `SpectatorScene` only did an *absolute* resync
-(snap to the exact reported position/rotation) on `'moved'` events;
-`'blocked'` only nudged the robot relative to wherever it currently
-happened to be rendered, and didn't even carry the robot's facing to
-resync rotation with. Any drift introduced there had no way to
-self-correct until the next successful move. Fixed by making every
-event type (`moved`, `turned`, `blocked`, `finished`) carry full
-position+facing and perform an absolute resync, and by killing any
-in-flight tween before applying a new event so a stale animation
-can't overwrite a fresh resync. Also closed a related gap: `finished`
-never carried the robot's landing position at all, so a dashboard
-robot that just won would stay frozen one tile short of the goal.
+- **`repeat [N] times`** - unlocked on **Loop Alley** (`loops`).
+- **`if wall ahead / else`** - unlocked on **Zigzag Trail**
+  (`loops` + `conditionals`). No general boolean expressions -
+  a fixed sensor check, deliberately scoped that way (comparisons/
+  variables are a later pass, not this one).
 
-**Milestone 6 of 8** — teacher dashboard live view. The teacher gets
-a dedicated screen while racing (no longer the student's Blockly
-workspace) showing: the room code, active maze name, a live elapsed
-timer, **one shared maze with every connected student's robot moving
-on it in real time** (color-matched to each student's pick), and a
-leaderboard listing every student - finishers ranked by time,
-everyone else shown as "Unfinished" rather than omitted. Disconnected
-students' robots dim in place rather than disappearing. The teacher
-can remove a student mid-race (same action as the lobby) and end the
-race back to the lobby, same as before.
+Both nest arbitrarily (a loop inside a conditional inside a loop,
+etc.) - this is the first real payoff of the interpreter's
+generator-based design from Milestone 4, which was built specifically
+so this wouldn't require restructuring how any caller consumes it.
+The bigger architecture change: `if` needs a real answer from the
+maze ("is there a wall ahead *right now*") before it can decide which
+branch to take, which meant switching `useProgramRunner` from a plain
+`for...of` loop to manually driving the generator via `gen.next(answer)`
+- JS generators support this natively, but it's a genuine two-way
+protocol now, not just "pull the next node." Sensor checks are
+instant (no shake/animation), don't move the robot, and are
+deliberately excluded from `race:progress` reporting - they're not
+opponent-visible progress, just local plumbing between the runner and
+the scene.
 
-This is the first consumer of `race:progress`/`race:opponentProgress`
-(wired since Milestone 5). One correctness fix made along the way:
-that relay previously identified students by their socket id, which
-changes on every reconnect - reused as a robot-map key, that would
-have spawned a duplicate robot for anyone who reconnected mid-race.
-It's now keyed by each student's stable `clientId` instead, matching
-how the rest of the app already identifies players. Race-start timing
-also moved from a server-internal map to a real field on `Room`
-(`raceStartedAt`), so the dashboard's elapsed timer is exact without
-extra plumbing.
-
-Students' own view is unchanged - they still don't see opponents'
-robots, by design (see the earlier decision to keep that exclusively
-on the teacher's dashboard).
-
-**Since deployment:** fixed a real bug found during cross-device
-testing - a reconnected student's socket came back fine at the
-transport level, but nothing told the server which `Player` record
-the new socket belonged to (the teacher had this via
-`room:rejoinTeacher`; students never had an equivalent). They'd sit
-shown as "disconnected" in the roster until the 30s grace period
-expired and removed them, even though they were actually back online.
-Fixed by giving students the same silent auto-rejoin the teacher
-already had, reusing `room:join` (see `useRoom.ts` - `RoomManager`
-already treated a matching `clientId` as a reconnect, the client just
-never told it to).
-
-**Earlier milestones, condensed:** race mechanics with
+**Earlier milestones, condensed:** teacher dashboard with a shared
+live maze view, full-roster leaderboard, and clientId-stable robot
+tracking across reconnects (6) → race mechanics with
 server-authoritative timing and a Practice Grid for finished students
 (5) → Blockly editor and interpreter, with a real 1.5s shake penalty
 on wall collisions that doesn't stop execution, plus Reset
 Sprite/Clear Work Area as independent controls (4) → Phaser maze
 rendering (3) → room lifecycle with reconnection handling (2) →
-monorepo scaffold (1). Full detail in each milestone's commit
-history.
+monorepo scaffold (1). Several rounds of real bugs found and fixed
+via cross-device testing along the way (student reconnection, teacher
+removal not resetting the removed student's screen, dashboard robot
+desync after collisions) - full detail in commit history.
 
 Students still pick a placeholder-colored robot when joining - the
-same color now also identifies them on the teacher's shared dashboard
-view.
+same color identifies them on the teacher's shared dashboard view.
 
 ## Stack
 
@@ -121,50 +83,60 @@ npm run dev:server        # http://localhost:4000
 npm run dev:client        # http://localhost:5173
 ```
 
-## Testing Milestone 6
+## Testing Milestone 7
 
-Same three-tab setup as before: one teacher, two students.
+Single tab is enough for most of this (the new blocks are entirely
+about what a student can write, not multiplayer behavior) - use two
+tabs only for the last step.
 
-1. **Tab 1 (teacher)**: create a room. **Tabs 2 & 3 (students)**:
-   join with different nicknames and *different* colors (important -
-   you're about to visually distinguish them on one shared board).
-2. **Tab 1**: pick a maze, start the race.
-3. Tab 1 should now show the **dashboard**, not a Blockly workspace:
-   room code, maze name, an elapsed timer ticking up from `0:00`,
-   one maze with two robots on it (each tinted the color that student
-   picked), and a leaderboard listing both students as "Unfinished."
-4. **Tabs 2 & 3**: build and run programs. As each moves/turns, watch
-   **Tab 1** - the corresponding robot on the teacher's shared maze
-   should move/turn live, matching what's happening on that student's
-   own screen (small network delay is expected and fine).
-5. **Wall collision, watched live**: have one student walk into a
-   wall. On Tab 1, that robot should give a quick visual bump - it
-   does *not* need to replicate the student's full 1.5s pause exactly
-   (the dashboard is a passive spectator view, not driving execution),
-   just confirm something visibly happens rather than nothing.
-6. **A student finishes**: confirm on Tab 1 that student's entry in
-   the leaderboard panel updates from "Unfinished" to a real time,
-   live, without refreshing.
-7. **Disconnect a student** (devtools Network → Offline on Tab 2 or
-   3): within a few seconds, that student's robot on Tab 1's shared
-   maze should visibly dim (not disappear). Reconnect - it should
-   brighten back to full opacity. This is the same clientId-based
-   identity fix that made student roster reconnection work; confirm
-   it also means **the robot doesn't duplicate** on reconnect - you
-   should still see exactly one robot per student throughout.
-8. **Remove a student**: click Remove next to a student's row on
-   Tab 1's leaderboard panel. Confirm the same behavior as the lobby's
-   Remove button (that student's screen resets), and their robot/row
-   disappears from the dashboard.
-9. **End race, back to lobby**: click it on Tab 1. All tabs return to
-   the lobby. Start a new race and confirm Tab 1 gets a completely
-   fresh dashboard (elapsed timer back at `0:00`, both students back
-   to "Unfinished," robots reset to the new maze's start position).
-10. **Student view unaffected**: confirm Tabs 2 & 3 still look and
-    behave exactly like Milestone 5 - Blockly workspace, Run/Reset
-    Sprite/Clear Work Area, their own leaderboard panel, Practice Grid
-    on finishing. Students still can't see opponents' robots - that
-    remains dashboard-only, by design.
+1. **Toolbox gating**: create a room, pick **"Straight Line"** or
+   **"Around the Corner"** (either original maze) and start the race.
+   Confirm the Blockly palette shows only start/move/turn - no repeat
+   or if block. This confirms existing mazes correctly stay
+   sequencing-only.
+2. **Loop Alley**: end that race, start a new one on **Loop Alley**.
+   The palette should now also offer **"repeat [ ] times."** Drag one
+   in, set the count to 8 (default is 3 - click the number to edit
+   it), snap a single "move forward" inside it, run. The robot should
+   move all 8 tiles to the goal from one loop block instead of 8
+   separate move blocks.
+3. **Loop count edge cases**: try a repeat count that's too high or
+   too low for the corridor (e.g. repeat 3 - robot stops short; repeat
+   20 - robot should hit the goal and then, since 'finished' stops
+   execution entirely per Milestone 4/5 behavior, the extra iterations
+   never happen - confirm no error, no attempt to move past the goal).
+4. **Zigzag Trail**: start a race on **Zigzag Trail**. Palette should
+   now also offer **"if wall ahead / else."** This maze has 4
+   segments and 3 turns (right, then left, then right) - try solving
+   it two ways:
+   - **Plain sequencing** (no loop/if at all) - should work exactly
+     like any earlier maze, just longer.
+   - **Loops for the straight segments** (e.g. `repeat 2: move
+     forward` for the first segment) **combined with explicit turn
+     blocks** at the right points - confirms nesting a movement
+     inside a loop works, and that loops/turns can be freely mixed.
+5. **The if block itself**: build a program using `if wall ahead` -
+   e.g. right after the first segment, use it to decide whether to
+   turn (put a turn block in "do," leave "else" empty or put a move
+   block there). Click Run and confirm: the if-block itself
+   highlights briefly while its condition is checked (no shake, no
+   delay - this is instant, unlike a real collision), then whichever
+   branch matches actually executes.
+6. **Nesting**: build a program with a repeat block containing an if
+   block containing another repeat block (however contrived - the
+   point is confirming arbitrary nesting doesn't break). Confirm Run
+   still highlights the correct block at each step and the robot
+   behaves as the nested structure implies.
+7. **Reset Sprite / Clear Work Area still work** with these new block
+   types in the workspace - Clear Work Area should wipe repeat/if
+   blocks along with everything else back to just the start hat.
+8. **Multiplayer sanity check** (two tabs): race Zigzag Trail with a
+   teacher + one student. Confirm the teacher's dashboard still
+   tracks the student's robot accurately through loop/conditional
+   execution - sensor checks specifically should produce **no visible
+   effect** on the teacher's dashboard (no robot movement, no stray
+   event), since they're deliberately excluded from opponent-progress
+   reporting.
 
 ## Typechecking
 
@@ -259,7 +231,7 @@ connected to the repo).
 4. ✅ Blockly editor + custom step-by-step interpreter (sequencing only)
 5. ✅ Race mechanics (simultaneous execution, win detection, leaderboard)
 6. ✅ Teacher dashboard live view
-7. Progressive block unlocking (loops, conditionals, variables, functions)
+7. ✅ Progressive block unlocking (loops, conditionals - variables/functions deferred)
 8. Polish pass (animations, error messaging, responsive layout, replay)
 
 ## License

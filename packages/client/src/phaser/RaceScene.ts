@@ -64,12 +64,14 @@ export class RaceScene extends Phaser.Scene {
     this.bridge.on('command:moveForward', this.handleMoveForward, this);
     this.bridge.on('command:turnLeft', this.handleTurnLeft, this);
     this.bridge.on('command:turnRight', this.handleTurnRight, this);
+    this.bridge.on('command:checkWallAhead', this.handleCheckWallAhead, this);
     this.bridge.on('command:resetToStart', this.handleResetToStart, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.bridge.off('command:moveForward', this.handleMoveForward, this);
       this.bridge.off('command:turnLeft', this.handleTurnLeft, this);
       this.bridge.off('command:turnRight', this.handleTurnRight, this);
+      this.bridge.off('command:checkWallAhead', this.handleCheckWallAhead, this);
       this.bridge.off('command:resetToStart', this.handleResetToStart, this);
     });
 
@@ -175,6 +177,22 @@ export class RaceScene extends Phaser.Scene {
       this.emitResult({ action: 'blocked', reason, position: this.position, facing: this.facing }, commandId);
     });
   }
+
+  /**
+   * Not gated by `this.animating` - a sensor check is instantaneous
+   * and doesn't move the robot, so there's no animation to conflict
+   * with. Reuses `isBlocked` directly (not a separate check) so the
+   * sensor's answer is guaranteed to agree with what an actual
+   * moveForward attempt from the same position/facing would find -
+   * two independent implementations of "is there a wall ahead" could
+   * drift out of sync; one shared check can't.
+   */
+  private handleCheckWallAhead = (commandId: string): void => {
+    const delta = DIRECTION_DELTA[this.facing];
+    const next = { x: this.position.x + delta.x, y: this.position.y + delta.y };
+    const wallAhead = this.isBlocked(next) !== null;
+    this.emitResult({ action: 'sensor', sensor: 'wallAhead', result: wallAhead }, commandId);
+  };
 
   private handleTurnLeft = (commandId: string): void => {
     if (this.animating) return;
